@@ -163,6 +163,41 @@ ipcMain.handle('px:get', async (_e, list) => {
   }));
   return out;
 });
+
+/* ---- live charts (public data) ---- */
+const UA = { 'user-agent': 'Mozilla/5.0' };
+const RMAP = { '1d': ['1d', '5m'], '5d': ['5d', '30m'], '1mo': ['1mo', '1d'], '6mo': ['6mo', '1d'], '1y': ['1y', '1d'] };
+const cleanSym = s => String(s || '').toUpperCase().replace(/[^A-Z0-9.\-^=]/g, '');
+ipcMain.handle('px:chart', async (_e, sym, range) => {
+  try {
+    sym = cleanSym(sym); const [r, i] = RMAP[range] || RMAP['1d'];
+    const res = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(sym) + '?range=' + r + '&interval=' + i + '&includePrePost=false', { headers: UA });
+    if (!res.ok) return null;
+    const j = await res.json(), R = j.chart && j.chart.result && j.chart.result[0]; if (!R) return null;
+    const ts = R.timestamp || [], cl = ((R.indicators && R.indicators.quote && R.indicators.quote[0]) || {}).close || [], t = [], c = [];
+    ts.forEach((x, k) => { if (cl[k] != null) { t.push(x * 1000); c.push(cl[k]); } });
+    const m = R.meta || {};
+    return { t, c, meta: { price: m.regularMarketPrice, prev: m.chartPreviousClose || m.previousClose || 0, type: m.instrumentType, name: m.longName || m.shortName || sym, sym } };
+  } catch { return null; }
+});
+let yCrumb = null;
+async function yAuth() {
+  if (yCrumb && Date.now() < yCrumb.exp) return yCrumb;
+  const r = await fetch('https://fc.yahoo.com', { headers: UA, redirect: 'manual' });
+  const ck = (r.headers.getSetCookie ? r.headers.getSetCookie() : []).map(x => x.split(';')[0]).join('; ');
+  const c = await fetch('https://query1.finance.yahoo.com/v1/test/getcrumb', { headers: Object.assign({ cookie: ck }, UA) });
+  const crumb = await c.text(); if (!c.ok || !crumb || crumb.length > 40) throw new Error('crumb');
+  yCrumb = { ck, crumb, exp: Date.now() + 3600e3 }; return yCrumb;
+}
+ipcMain.handle('px:fund', async (_e, sym) => {
+  try {
+    const a = await yAuth();
+    const r = await fetch('https://query1.finance.yahoo.com/v10/finance/quoteSummary/' + encodeURIComponent(cleanSym(sym)) + '?modules=topHoldings&crumb=' + encodeURIComponent(a.crumb), { headers: Object.assign({ cookie: a.ck }, UA) });
+    if (!r.ok) { yCrumb = null; return { holdings: [] }; }
+    const j = await r.json(), th = (((j.quoteSummary || {}).result || [])[0] || {}).topHoldings || {};
+    return { holdings: (th.holdings || []).filter(h => h.symbol).slice(0, 5).map(h => ({ sym: h.symbol, name: h.holdingName, pct: ((h.holdingPercent && h.holdingPercent.raw) || 0) * 100 })) };
+  } catch { return { holdings: [] }; }
+});
 ipcMain.handle('key:has', async () => fs.existsSync(keyFile()));
 ipcMain.handle('key:set', async (_e, k) => {
   if (!safeStorage.isEncryptionAvailable()) return false;

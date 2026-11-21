@@ -23,5 +23,7 @@ contextBridge.exposeInMainWorld('wg', {
   gSignout: () => ipcRenderer.invoke('g:signout'),
   gApi: (m, u, b) => ipcRenderer.invoke('g:api', m, u, b),
   pxGet: l => ipcRenderer.invoke('px:get', l),
+  pxChart: (s, r) => ipcRenderer.invoke('px:chart', s, r),
+  pxFund: s => ipcRenderer.invoke('px:fund', s),
   ai: b => ipcRenderer.invoke('ai:send', b)
 });
