@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>White Glove</title><meta http-equiv='Content-Security-Policy' content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:"><script src='xlsx.full.min.js'></script>
+
+<style>
+:root{--bg:#ffffff;--panel:#ffffff;--ink:#16181d;--mut:#6b7280;--line:#e8e9ec;--side:#f4f4f5;--sidei:#4b5058;--gold:#a8844a;--good:#2f7d4f;--bad:#b4493a;--in:#f6f6f7;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html,body{height:100%;margin:0}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{background:var(--bg);color:var(--ink);font:14px/1.5 Inter,system-ui,sans-serif;display:grid;grid-template-columns:220px 1fr 0}
+body.chat{grid-template-columns:220px 1fr 360px}
+aside{background:var(--side);border-right:1px solid var(--line);color:var(--sidei);padding:28px 14px;display:flex;flex-direction:column;gap:4px;min-height:0}
+.logo{font:600 26px 'Cormorant Garamond',Georgia,serif;color:var(--ink);padding:0 10px 22px;letter-spacing:.5px}.logo i{color:var(--gold);font-style:normal}
+nav button,.ask{all:unset;cursor:pointer;padding:9px 12px;border-radius:8px;color:var(--sidei);display:block}
+nav button:hover,.ask:hover{background:#eaeaec}nav button.on{background:#fff;color:var(--ink);font-weight:500;box-shadow:0 0 0 1px var(--line),0 1px 2px rgba(0,0,0,.04)}
+.ask{margin-top:auto;border:1px solid var(--line);background:#fff;text-align:center;color:var(--ink)}
+main{padding:32px 40px;overflow:auto;min-width:0}
+h1{font:500 34px 'Cormorant Garamond',Georgia,serif;margin:0 0 4px}.sub{color:var(--mut);margin:0 0 24px}
+h2{font:600 12px Inter;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin:28px 0 10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.card .l{color:var(--mut);font-size:12px}.card .v{font:500 28px 'Cormorant Garamond',Georgia,serif;margin-top:2px}.card .s{font-size:12px;color:var(--mut)}
+.good{color:var(--good)}.bad{color:var(--bad)}
+form{display:flex;flex-wrap:wrap;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+input,select{background:var(--in);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit;min-width:0;flex:1 1 110px}
+.btn{background:var(--ink);color:var(--bg);border:0;border-radius:8px;padding:8px 16px;font:600 13px Inter;cursor:pointer;flex:0 0 auto}
+.wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+th,td{text-align:left;padding:9px 14px;border-bottom:1px solid var(--line);white-space:nowrap}th{color:var(--mut);font-weight:500;font-size:12px}
+td.r,th.r{text-align:right}.x{all:unset;cursor:pointer;color:var(--mut);padding:0 6px}.x:hover{color:var(--bad)}
+.bar{height:8px;background:var(--in);border-radius:5px;overflow:hidden}.bar i{display:block;height:100%;background:var(--gold)}
+.row{display:grid;grid-template-columns:110px 1fr 90px;gap:12px;align-items:center;margin:8px 0}.row span:last-child{text-align:right;color:var(--mut)}
+.empty{color:var(--mut);padding:18px;text-align:center}
+#chat{display:none;flex-direction:column;background:var(--panel);border-left:1px solid var(--line);min-height:0}
+body.chat #chat{display:flex}
+#chat header{padding:20px 20px 12px;font:600 22px 'Cormorant Garamond',Georgia,serif;border-bottom:1px solid var(--line)}
+#log{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+.m{max-width:88%;padding:9px 13px;border-radius:12px;white-space:pre-wrap}.m.user{align-self:flex-end;background:var(--ink);color:var(--bg)}.m.ai{background:var(--in)}
+#chat form{border:0;border-top:1px solid var(--line);border-radius:0;flex-wrap:nowrap}
+@media(max-width:760px){body,body.chat{grid-template-columns:1fr}aside{flex-direction:row;overflow-x:auto;padding:10px}.logo,.ask{display:none}main{padding:20px}body.chat main{display:none}}
+:root{--bg:#fafafb}
+h1,.logo,.card .v,#chat header{font-family:Inter,system-ui,sans-serif}
+h1{font-size:24px;font-weight:600;letter-spacing:-.01em}
+.logo{font-size:19px;font-weight:700;letter-spacing:-.01em}
+.card .v{font-size:26px;font-weight:600;letter-spacing:-.02em}
+.card .l{display:flex;align-items:center;gap:8px;color:var(--ink);font-weight:500;font-size:13px}
+.chip{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-style:normal;flex:0 0 auto}
+nav button{display:flex;gap:10px;align-items:center}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.btn.dk{display:inline-flex;gap:8px;align-items:center}
+.rng{display:flex;gap:20px;margin:0 0 18px;border-bottom:1px solid var(--line)}
+.rng button{all:unset;cursor:pointer;color:var(--mut);padding:6px 0;font-size:13px}
+.rng .on{color:var(--ink);border-bottom:2px solid var(--ink);margin-bottom:-1px}
+.two{display:grid;grid-template-columns:1.6fr 1fr;gap:14px;margin-top:14px}
+.card.dark{background:#1b1d22;color:#fff;border-color:#1b1d22}.dark .s{color:#aeb2bb;font-size:13px}.dark .btn{background:#fff;color:#16181d}
+.li{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}.li:last-child{border:0}
+.li .n{flex:1}.li small{display:block;color:var(--mut)}
+.foot{margin-top:8px;border-top:1px solid var(--line);padding-top:8px}
+.bk{display:flex;gap:6px;margin-top:8px}.bk button{all:unset;cursor:pointer;flex:1;text-align:center;font-size:12px;color:var(--mut);padding:6px;border-radius:6px}.bk button:hover{background:#eaeaec}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#16181d;color:#fff;padding:9px 16px;border-radius:10px;font-size:13px;z-index:9}
+@media(max-width:760px){.two{grid-template-columns:1fr}.bk{display:none}}
+#lock{position:fixed;inset:0;background:var(--bg);z-index:50;display:grid;place-items:center}#lock[hidden]{display:none}
+#lock form{flex-direction:column;width:300px;padding:28px;gap:12px;text-align:center;box-shadow:0 8px 30px rgba(16,24,40,.08)}#lock .lg{font:700 22px Inter,sans-serif}#lock .lg i{color:var(--gold);font-style:normal}#lock p{margin:0;color:var(--mut)}#lock input,#lock .btn{flex:0 0 auto}
+.lnk{all:unset;cursor:pointer;font-size:12px;color:var(--mut)}.err{color:var(--bad);font-size:12px;min-height:14px}
+.dash{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.w{position:relative;min-width:0}.w.zs{grid-column:span 1}.w.zm{grid-column:span 2}.w.zl{grid-column:span 4}.w>.card{height:100%;box-sizing:border-box}
+@media(max-width:1100px){.dash{grid-template-columns:repeat(2,1fr)}.w.zl{grid-column:span 2}}@media(max-width:560px){.dash{grid-template-columns:1fr}.w.zs,.w.zm,.w.zl{grid-column:span 1}}
+.edit .w{outline:1.5px dashed var(--line);outline-offset:3px;border-radius:12px}
+.tb{position:absolute;top:-13px;right:8px;display:flex;gap:2px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:2px;z-index:2;box-shadow:0 1px 3px rgba(0,0,0,.08)}.tb button{all:unset;cursor:pointer;padding:2px 8px;font-size:12px;border-radius:6px;color:var(--mut)}.tb button:hover{background:var(--in);color:var(--ink)}
+.rng .sp{flex:1}.gh{all:unset;cursor:pointer;font-size:13px;padding:4px 12px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;background:#fff}
+.tray{display:flex;flex-wrap:wrap;gap:8px}.tray button{all:unset;cursor:pointer;padding:6px 12px;border:1px dashed var(--mut);border-radius:20px;font-size:13px}.tray button:hover{background:var(--in)}
+.nt{width:100%;min-height:110px;box-sizing:border-box;border:0;resize:vertical;background:transparent;color:var(--ink);font:inherit;outline:0;margin-top:8px}.pill{display:inline-block;background:var(--in);color:var(--mut);border-radius:20px;padding:2px 10px;font-size:12px}
+.fl button{all:unset;cursor:pointer;display:block;padding:8px 10px;border-radius:8px;width:calc(100% - 20px)}.fl button:hover{background:var(--in)}#drv .btn{margin-right:6px}#drv details{margin-top:10px}
+:root{--bg:#FAF9F5;--panel:#FFFFFF;--ink:#141413;--mut:#73726C;--line:#E6E4DB;--side:#F0EEE6;--sidei:#3D3D3A;--gold:#D97757;--good:#3F7D58;--bad:#B5473A;--in:#F3F1E9}
+html{background:#EAE7DD}
+body{position:relative;width:min(1240px,calc(100vw - 48px));height:min(860px,calc(100vh - 48px));margin:24px auto;border-radius:16px;overflow:hidden;border:1px solid #DDD9CC;box-shadow:0 12px 40px rgba(20,20,19,.12),0 2px 6px rgba(20,20,19,.06);grid-template-rows:minmax(0,1fr)}
+#lock{position:absolute}::selection{background:rgba(217,119,87,.25)}
+h1{font-family:'Tiempos Headline',Georgia,'Times New Roman',serif;font-weight:400;font-size:30px;letter-spacing:-.01em}
+.logo{font-family:'Tiempos Headline',Georgia,'Times New Roman',serif;font-weight:500;font-size:22px}
+nav button:hover,.ask:hover,.bk button:hover{background:#E8E5DA}
+.btn{background:#C96442;color:#fff}.btn:hover{background:#B5573A}.dark .btn:hover{background:#F3F1E9}
+.card.dark{background:#2B2A27;border-color:#2B2A27}
+#chat{background:var(--bg)}.m.user{background:#EDEAE0;color:var(--ink)}.m.ai{background:transparent;padding-left:0}
+@media(max-width:900px){html{background:var(--bg)}body{width:100vw;height:100vh;margin:0;border-radius:0;border:0;box-shadow:none}}
+@media(max-width:760px){body,body.chat{grid-template-rows:auto minmax(0,1fr)}}
+
+html{background:var(--bg)}
+body{width:100vw;height:100vh;margin:0;border-radius:0;border:0;box-shadow:none;padding-top:36px;box-sizing:border-box;font-family:'Segoe UI',system-ui,sans-serif}
+#tb{position:fixed;top:0;left:0;right:0;height:36px;z-index:100;-webkit-app-region:drag;background:var(--side);border-bottom:1px solid var(--line);display:flex;align-items:center;padding-left:14px;font-size:12px;color:var(--mut);user-select:none}
+#tb b{color:var(--ink);font-weight:600;margin-right:6px}
+#lock{top:36px}
+</style></head><body><div id='tb'><b>White Glove</b></div>
+<aside><div class="logo">White <i>Glove</i></div><nav id="nav"></nav><button class="ask" onclick="document.body.classList.toggle('chat')">Ask Claude</button></aside>
+<main id="main"></main>
+<section id="chat"><header>Claude</header><div id="log"></div>
+<form onsubmit="return C(this)"><input name="q" placeholder="Log a meal, add an expense, ask anything…" autocomplete="off"><button class="btn">Send</button></form></section>
+<script>
+const $=s=>document.querySelector(s),K='whiteglove1';
+let S={tx:[],hold:[],meals:[],sets:[],goals:{kcal:2800,p:200,c:300,f:80}},tab='overview';
+try{const r=localStorage.getItem(K);if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}
+const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}};
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const $$=n=>(n<0?'−':'')+'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:Number.isInteger(n)?0:2,maximumFractionDigits:2});
+const sum=a=>a.reduce((s,x)=>s+x.amt,0),id=()=>Date.now()+Math.random();
+const card=(l,v,s='',c='')=>`<div class="card"><div class="l">${ci(l)}${l}</div><div class="v ${c}">${v}</div><div class="s">${s}</div></div>`;
+const bar=(p)=>`<div class="bar"><i style="width:${Math.min(100,Math.max(0,p))}%"></i></div>`;
+const num=v=>+v||0;
+const A={
+ tx:d=>S.tx.push({id:id(),date:today(),desc:d.desc,cat:d.cat||'General',amt:Math.abs(num(d.amt)),type:d.type=='in'?'in':'out'}),
+ hold:d=>{const t=String(d.ticker).toUpperCase(),h=S.hold.find(x=>x.t==t);if(h){h.sh=num(d.shares);h.cost=num(d.cost);h.px=num(d.price)||h.px}else S.hold.push({id:id(),t,sh:num(d.shares),cost:num(d.cost),px:num(d.price)||num(d.cost)})},
+ price:d=>{const h=S.hold.find(x=>x.t==String(d.ticker).toUpperCase());if(h)h.px=num(d.price);return !!h},
+ meal:d=>S.meals.push({id:id(),date:today(),name:d.name,k:num(d.k),p:num(d.p),c:num(d.c),f:num(d.f)}),
+ set:d=>S.sets.push({id:id(),date:today(),ex:d.ex,w:num(d.w),r:num(d.r)}),
+ goals:d=>{S.goals={kcal:num(d.kcal)||S.goals.kcal,p:num(d.p)||S.goals.p,c:num(d.c)||S.goals.c,f:num(d.f)||S.goals.f}}
+};
+function F(kind,form){const d=Object.fromEntries(new FormData(form));A[kind](d);save();render();return false}
+function D(k,i){S[k]=S[k].filter(x=>x.id!=i);save();render()}
+const TABS=[['overview','Overview'],['fin','Finances'],['inv','Investments'],['nut','Nutrition'],['lift','Lifting']];
+const ph=(t,s)=>`<div class='top'><div><h1>${t}</h1><p class='sub'>${s}</p></div>${AB()}</div>`;
+const V={
+overview(){const h=new Date().getHours(),m=today().slice(0,7),T=S.tx.filter(x=>x.date.startsWith(m)),inc=sum(T.filter(x=>x.type=='in')),ex=sum(T.filter(x=>x.type=='out'));
+ const val=S.hold.reduce((s,x)=>s+x.sh*x.px,0),cost=S.hold.reduce((s,x)=>s+x.sh*x.cost,0),M=S.meals.filter(x=>x.date==today()),k=M.reduce((s,x)=>s+x.k,0),p=M.reduce((s,x)=>s+x.p,0),L=S.sets.filter(x=>x.date==today());
+ return ph(`Good ${h<12?'morning':h<18?'afternoon':'evening'}, Noah`,'Your life at a glance.')+`<div class="grid">${card('Net cash flow · this month',$$(inc-ex),`${$$(inc)} in · ${$$(ex)} out`,inc-ex>=0?'good':'bad')}${card('Portfolio value',$$(val),S.hold.length?`${$$(val-cost)} all-time`:'No holdings yet',val-cost>=0?'good':'bad')}${card('Calories today',Math.round(k),`of ${S.goals.kcal}`)}${card('Protein today',Math.round(p)+'g',`of ${S.goals.p}g`)}${card('Sets today',L.length,L.length?L.map(x=>x.ex).filter((v,i,a)=>a.indexOf(v)==i).join(', '):'Rest day?')}</div>
+ <h2>Quick start</h2><p class="sub">Use the tabs on the left, or open <b>Ask Claude</b> and say things like “I had 3 eggs and toast, about 450 calories” or “bought VTI, 10 shares at $240”.</p>`},
+fin(){const m=today().slice(0,7),T=S.tx.filter(x=>x.date.startsWith(m)),inc=sum(T.filter(x=>x.type=='in')),ex=sum(T.filter(x=>x.type=='out')),c={};
+ T.filter(x=>x.type=='out').forEach(x=>c[x.cat]=(c[x.cat]||0)+x.amt);const mx=Math.max(1,...Object.values(c));
+ return ph('Finances','Income and spending, tracked month by month.')+`<div class="grid">${card('Income',$$(inc),'this month','good')}${card('Spending',$$(ex),'this month')}${card('Net',$$(inc-ex),'this month',inc-ex>=0?'good':'bad')}${card('Savings rate',inc?Math.round((inc-ex)/inc*100)+'%':'—','of income')}</div>
+ <h2>Add transaction</h2><form onsubmit="return F('tx',this)"><select name="type"><option value="out">Expense</option><option value="in">Income</option></select><input name="desc" placeholder="Description" required><input name="cat" placeholder="Category" list="cats"><datalist id="cats"><option>Housing<option>Food<option>Transport<option>Wedding<option>Subscriptions<option>Salary</datalist><input name="amt" type="number" step="any" placeholder="Amount" required><button class="btn">Add</button></form>
+ <h2>Spending by category</h2><div class="card">${Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="row"><span>${esc(k)}</span>${bar(v/mx*100)}<span>${$$(v)}</span></div>`).join('')||'<div class="empty">No spending logged this month.</div>'}</div>
+ <h2>Recent</h2><div class="wrap"><table>${S.tx.slice(-15).reverse().map(x=>`<tr><td>${x.date}</td><td>${esc(x.desc)}</td><td>${esc(x.cat)}</td><td class="r ${x.type=='in'?'good':''}">${x.type=='in'?'+':'−'}${$$(x.amt).replace('−','')}</td><td><button class="x" onclick="D('tx',${x.id})">✕</button></td></tr>`).join('')||'<tr><td class="empty">Nothing yet.</td></tr>'}</table></div>`},
+inv(){const val=S.hold.reduce((s,x)=>s+x.sh*x.px,0),cost=S.hold.reduce((s,x)=>s+x.sh*x.cost,0),g=val-cost;
+ return ph('Investments','Holdings, cost basis and gains. Prices are entered by you or Claude.')+`<div class="grid">${card('Value',$$(val),`${S.hold.length} holdings`)}${card('Cost basis',$$(cost))}${card('Gain / loss',$$(g),cost?(g/cost*100).toFixed(1)+'%':'',g>=0?'good':'bad')}</div>
+ <h2>Add or update holding</h2><form onsubmit="return F('hold',this)"><input name="ticker" placeholder="Ticker" required><input name="shares" type="number" step="any" placeholder="Shares" required><input name="cost" type="number" step="any" placeholder="Cost / share" required><input name="price" type="number" step="any" placeholder="Current price"><button class="btn">Save</button></form>
+ <h2>Holdings</h2><div class="wrap"><table><tr><th>Ticker</th><th class="r">Shares</th><th class="r">Price</th><th class="r">Value</th><th class="r">Gain</th><th class="r">Weight</th><th></th></tr>${S.hold.map(x=>{const v=x.sh*x.px,gg=v-x.sh*x.cost;return `<tr><td><b>${esc(x.t)}</b></td><td class="r">${x.sh}</td><td class="r">${$$(x.px)}</td><td class="r">${$$(v)}</td><td class="r ${gg>=0?'good':'bad'}">${$$(gg)}</td><td class="r">${val?Math.round(v/val*100):0}%</td><td><button class="x" onclick="D('hold',${x.id})">✕</button></td></tr>`}).join('')||'<tr><td class="empty">No holdings yet.</td></tr>'}</table></div>`},
+nut(){const M=S.meals.filter(x=>x.date==today()),t=k=>M.reduce((s,x)=>s+x[k],0),G=S.goals,R=[['Calories','k',G.kcal,''],['Protein','p',G.p,'g'],['Carbs','c',G.c,'g'],['Fat','f',G.f,'g']];
+ return ph('Nutrition','Today’s intake against your targets.')+`<div class="card">${R.map(([n,k,g,u])=>`<div class="row"><span>${n}</span>${bar(t(k)/g*100)}<span>${Math.round(t(k))} / ${g}${u}</span></div>`).join('')}</div>
+ <h2>Log a meal</h2><form onsubmit="return F('meal',this)"><input name="name" placeholder="Meal" required><input name="k" type="number" placeholder="Calories" required><input name="p" type="number" placeholder="Protein g"><input name="c" type="number" placeholder="Carbs g"><input name="f" type="number" placeholder="Fat g"><button class="btn">Add</button></form>
+ <h2>Today</h2><div class="wrap"><table>${M.map(x=>`<tr><td>${esc(x.name)}</td><td class="r">${x.k} kcal</td><td class="r">${x.p}P · ${x.c}C · ${x.f}F</td><td><button class="x" onclick="D('meals',${x.id})">✕</button></td></tr>`).join('')||'<tr><td class="empty">No meals logged today.</td></tr>'}</table></div>
+ <h2>Daily targets</h2><form onsubmit="return F('goals',this)"><input name="kcal" type="number" placeholder="Calories (${G.kcal})"><input name="p" type="number" placeholder="Protein (${G.p})"><input name="c" type="number" placeholder="Carbs (${G.c})"><input name="f" type="number" placeholder="Fat (${G.f})"><button class="btn">Update</button></form>`},
+lift(){const L=S.sets.filter(x=>x.date==today()),pr={};S.sets.forEach(x=>{const e=x.w*(1+x.r/30),o=pr[x.ex]||(pr[x.ex]={e:0,b:'',vol:0});o.vol+=x.w*x.r;if(e>o.e){o.e=e;o.b=x.w+' × '+x.r}});
+ const vol=L.reduce((s,x)=>s+x.w*x.r,0);
+ return ph('Lifting','Log sets, watch estimated one‑rep maxes climb.')+`<div class="grid">${card('Sets today',L.length)}${card('Volume today',Math.round(vol).toLocaleString(),'weight × reps')}${card('Exercises tracked',Object.keys(pr).length)}</div>
+ <h2>Log a set</h2><form onsubmit="return F('set',this)"><input name="ex" placeholder="Exercise" list="exs" required><datalist id="exs"><option>Squat<option>Bench Press<option>Deadlift<option>Overhead Press<option>Barbell Row<option>Pull-up</datalist><input name="w" type="number" step="any" placeholder="Weight" required><input name="r" type="number" placeholder="Reps" required><button class="btn">Add</button></form>
+ <h2>Today’s sets</h2><div class="wrap"><table>${L.map(x=>`<tr><td>${esc(x.ex)}</td><td class="r">${x.w} × ${x.r}</td><td><button class="x" onclick="D('sets',${x.id})">✕</button></td></tr>`).join('')||'<tr><td class="empty">No sets logged today.</td></tr>'}</table></div>
+ <h2>Personal records</h2><div class="wrap"><table><tr><th>Exercise</th><th class="r">Best set</th><th class="r">Est. 1RM</th><th class="r">Total volume</th></tr>${Object.entries(pr).map(([k,v])=>`<tr><td>${esc(k)}</td><td class="r">${v.b}</td><td class="r">${Math.round(v.e)}</td><td class="r">${Math.round(v.vol).toLocaleString()}</td></tr>`).join('')||'<tr><td class="empty">Nothing yet.</td></tr>'}</table></div>`}
+};
+function render(){$('#nav').innerHTML=TABS.map(([k,n])=>`<button class="${k==tab?'on':''}" onclick="tab='${k}';render()">${n}</button>`).join('');$('#main').innerHTML=V[tab]()}
+const IC={g:`<path d='M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z'/>`,m:`<path d='M3 7h18v12H3zM3 7l3-3h12l3 3M16 13h2'/>`,t:`<path d='M3 17l6-6 4 4 8-8M15 7h6v6'/>`,f:`<path d='M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-6 1-9z'/>`,d:`<path d='M6 8v8M18 8v8M3 10v4M21 10v4M6 12h12'/>`,h:`<path d='M4 20V10M10 20V4M16 20v-8M22 20H2'/>`,c:`<path d='M4 5h16v11H9l-5 4z'/>`},TI={overview:'g',fin:'m',inv:'t',nut:'f',lift:'d'};
+function svg(k,s){return `<svg width='${s||18}' height='${s||18}' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'>${IC[k]}</svg>`}
+function ci(l){const [k,bg,fg]=/income|spend|net|cash|saving|balance/i.test(l)?['m','#e6f4ea','#2f7d4f']:/value|cost|gain|holding|portfolio/i.test(l)?['t','#ede9fe','#6d4fd1']:/calor|protein|carb|fat/i.test(l)?['f','#fff4d6','#b7791f']:['d','#eceff3','#4b5058'];return `<i class='chip' style='background:${bg};color:${fg}'>${svg(k,15)}</i>`}
+function TC(){document.body.classList.toggle('chat')}
+function AB(){return `<button class='btn dk' onclick='TC()'>${svg('c',15)} Ask Claude</button>`}
+function render(){$('#nav').innerHTML=TABS.map(([k,n])=>`<button data-t='${k}' class='${k==tab?'on':''}'>${svg(TI[k],17)}${n}</button>`).join('');$('#main').innerHTML=V[tab]()}
+$('#nav').addEventListener('click',e=>{const b=e.target.closest('button');if(b){tab=b.dataset.t;render()}});
+$('#main').addEventListener('click',e=>{const b=e.target.closest('[data-r]');if(b){rng=b.dataset.r;render()}});
+const dstr=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const lastN=n=>Array.from({length:n},(_,i)=>{const d=new Date();d.setDate(d.getDate()-(n-1-i));return dstr(d)});
+function bars(v,l){const mx=Math.max(1,...v),w=300/v.length;return `<svg viewBox='0 0 300 130' width='100%'>${v.map((x,i)=>{const h=x/mx*92;return `<rect x='${i*w+w*.2}' y='${104-h}' width='${w*.6}' height='${Math.max(h,2)}' rx='4' fill='#D97757'/><text x='${i*w+w/2}' y='122' font-size='10' text-anchor='middle' fill='#6b7280'>${l[i]}</text>`}).join('')}</svg>`}
+function lineC(v,l){const mx=Math.max(1,...v),n=v.length,P=v.map((x,i)=>[14+i*(272/Math.max(1,n-1)),104-x/mx*90]);return `<svg viewBox='0 0 300 130' width='100%'><line x1='0' x2='300' y1='104' y2='104' stroke='#e8e9ec'/><polyline fill='none' stroke='#16181d' stroke-width='2' stroke-linejoin='round' points='${P.map(p=>p.join(',')).join(' ')}'/>${P.map((p,i)=>`<circle cx='${p[0]}' cy='${p[1]}' r='3.5' fill='#fff' stroke='#16181d' stroke-width='2'/><text x='${p[0]}' y='122' font-size='10' text-anchor='middle' fill='#6b7280'>${l[i]}</text>`).join('')}</svg>`}
+const chc=(t,s,g,f)=>`<div class='card'><b>${t}</b><div class='s'>${s}</div>${g}<div class='s foot'>${f}</div></div>`;
+let rng='week';const RD={today:1,week:7,month:30,year:365};
+const inR=d=>(Date.now()-new Date(d+'T00:00'))/864e5<RD[rng];
+V.overview=function(){
+const X=S.tx.filter(x=>inR(x.date)),inc=sum(X.filter(x=>x.type=='in')),ex=sum(X.filter(x=>x.type=='out')),val=S.hold.reduce((s,x)=>s+x.sh*x.px,0),cost=S.hold.reduce((s,x)=>s+x.sh*x.cost,0),M=S.meals.filter(x=>x.date==today()),k=M.reduce((s,x)=>s+x.k,0),p=M.reduce((s,x)=>s+x.p,0),LS=S.sets.filter(x=>inR(x.date)),d7=lastN(7),dl=d7.map(d=>'SMTWTFS'[new Date(d+'T00:00').getDay()]),cal=d7.map(d=>S.meals.filter(x=>x.date==d).reduce((s,x)=>s+x.k,0)),vol=d7.map(d=>Math.round(S.sets.filter(x=>x.date==d).reduce((s,x)=>s+x.w*x.r,0))),ms=Array.from({length:6},(_,i)=>{const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-(5-i));return dstr(d).slice(0,7)}),sp=ms.map(m=>sum(S.tx.filter(x=>x.type=='out'&&x.date.startsWith(m)))),ml=ms.map(m=>new Date(m+'-01T00:00').toLocaleString('en-US',{month:'short'}));
+return ph(`Hello Noah, <span style='font-weight:400'>here’s your overview</span>`,new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}))+`<div class='rng'>${[['today','Today'],['week','Last week'],['month','Last month'],['year','Last year']].map(([r,n])=>`<button data-r='${r}' class='${r==rng?'on':''}'>${n}</button>`).join('')}</div><div class='grid'>${card('Net cash flow',$$(inc-ex),`${$$(inc)} in · ${$$(ex)} out`,inc-ex>=0?'good':'bad')}${card('Portfolio value',$$(val),S.hold.length?`${$$(val-cost)} all-time`:'No holdings yet',val-cost>=0?'good':'bad')}${card('Calories today',Math.round(k),`of ${S.goals.kcal}`)}${card('Sets logged',LS.length,'in this period')}</div><div class='two'><div class='card'><b>Latest transactions</b>${S.tx.slice(-5).reverse().map(x=>`<div class='li'><i class='chip' style='background:#f1f2f4;color:#4b5058;font-weight:600'>${esc((x.desc[0]||'•').toUpperCase())}</i><div class='n'>${esc(x.desc)}<small>${esc(x.cat)} · ${x.date}</small></div><b class='${x.type=='in'?'good':''}'>${x.type=='in'?'+':'−'}${$$(x.amt).replace('−','')}</b></div>`).join('')||`<div class='empty'>No transactions yet. Add one in Finances or ask Claude.</div>`}</div><div class='card dark'><b>Today’s focus</b><p class='s'>${Math.max(0,S.goals.p-Math.round(p))}g protein and ${Math.max(0,S.goals.kcal-Math.round(k))} kcal left to hit today’s targets.</p>${bar(p/S.goals.p*100)}<p><button class='btn' onclick='TC()'>Ask Claude</button></p></div></div><div class='grid' style='margin-top:14px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))'>${chc('Calories','Last 7 days',bars(cal,dl),'◷ updated just now')}${chc('Lifting volume','Last 7 days',lineC(vol,dl),'◷ weight × reps')}${chc('Spending','Last 6 months',lineC(sp,ml),'◷ monthly total')}</div>`};
+const M6=()=>{const ms=Array.from({length:6},(_,i)=>{const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-(5-i));return dstr(d).slice(0,7)});return {sp:ms.map(m=>sum(S.tx.filter(x=>x.type=='out'&&x.date.startsWith(m)))),inc:ms.map(m=>sum(S.tx.filter(x=>x.type=='in'&&x.date.startsWith(m)))),ml:ms.map(m=>new Date(m+'-01T00:00').toLocaleString('en-US',{month:'short'}))}};
+const D7=()=>{const d=lastN(7);return {d,dl:d.map(x=>'SMTWTFS'[new Date(x+'T00:00').getDay()])}};
+const wrapV=(k,mk,fn)=>{const o=V[k];V[k]=()=>o().replace(mk,()=>fn()+mk)};
+const GR=`<div class='grid' style='margin-top:14px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))'>`;
+wrapV('fin','<h2>Add transaction</h2>',()=>{const m=M6();return `<h2>Trends</h2>${GR}${chc('Spending','Last 6 months',bars(m.sp,m.ml),'◷ monthly total')}${chc('Income','Last 6 months',lineC(m.inc,m.ml),'◷ monthly total')}</div>`});
+wrapV('inv','<h2>Add or update holding</h2>',()=>{const v=S.hold.map(x=>[x.t,x.sh*x.px]).sort((a,b)=>b[1]-a[1]),t=v.reduce((s,x)=>s+x[1],0)||1;return `<h2>Allocation</h2><div class='card'>${v.map(([n,x])=>`<div class='row'><span>${esc(n)}</span>${bar(x/t*100)}<span>${Math.round(x/t*100)}%</span></div>`).join('')||`<div class='empty'>Add a holding to see allocation.</div>`}</div>`});
+wrapV('nut','<h2>Log a meal</h2>',()=>{const q=D7(),sm=k=>q.d.map(x=>S.meals.filter(m=>m.date==x).reduce((s,m)=>s+m[k],0));return `<h2>This week</h2>${GR}${chc('Calories','Last 7 days',bars(sm('k'),q.dl),`◷ target ${S.goals.kcal}`)}${chc('Protein','Last 7 days',lineC(sm('p'),q.dl),`◷ target ${S.goals.p}g`)}</div>`});
+wrapV('lift','<h2>Log a set</h2>',()=>{const q=D7();return `<h2>This week</h2>${GR}${chc('Volume','Last 7 days',bars(q.d.map(x=>Math.round(S.sets.filter(m=>m.date==x).reduce((s,m)=>s+m.w*m.r,0))),q.dl),'◷ weight × reps')}${chc('Sets','Last 7 days',lineC(q.d.map(x=>S.sets.filter(m=>m.date==x).length),q.dl),'◷ per day')}</div>`});
+function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.append(t);setTimeout(()=>t.remove(),2600)}
+{const bk=document.createElement('div');bk.className='bk';bk.innerHTML=`<button id='xp'>Export</button><button id='ip'>Import</button><input id='fi' type='file' accept='.json' hidden>`;document.querySelector('aside').append(bk);
+$('#xp').onclick=async()=>{try{const r=await wg.saveFile('white-glove-backup.json',JSON.stringify(S,null,2));if(r)toast('Backup saved')}catch(e){toast('Export failed')}};
+$('#ip').onclick=()=>$('#fi').click();
+$('#fi').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const o=JSON.parse(r.result);if(!o||!Array.isArray(o.tx))throw 0;S=Object.assign({tx:[],hold:[],meals:[],sets:[],goals:S.goals},o);save();render();toast('Data imported')}catch(x){toast('That file isn’t a White Glove backup')}};r.readAsText(f);e.target.value=''}}
+let ed=false;
+const WD=[['bal','Total balance','s'],['cash','Net cash flow','s'],['port','Portfolio value','s'],['save','Savings rate','s'],['kcal','Calories today','s'],['prot','Protein today','s'],['sets','Sets logged','s'],['txs','Latest transactions','m'],['focus','Today’s focus','m'],['calc','Calories chart','m'],['volc','Lifting volume chart','m'],['spc','Spending chart','m'],['alloc','Allocation','m'],['prs','Personal records','m'],['macro','Macro balance','m'],['note','Notes','m']];
+const WT=Object.fromEntries(WD.map(w=>[w[0],w[1]])),ON=['bal','cash','port','kcal','txs','focus','calc','volc','spc'];
+function lay(){if(!S.layout)S.layout=WD.map(([i,,w])=>({id:i,w,on:ON.includes(i)}));WD.forEach(([i,,w])=>{if(!S.layout.find(x=>x.id==i))S.layout.push({id:i,w,on:false})});return S.layout}
+function CX(){const X=S.tx.filter(x=>inR(x.date)),inc=sum(X.filter(x=>x.type=='in')),ex=sum(X.filter(x=>x.type=='out')),all=sum(S.tx.filter(x=>x.type=='in'))-sum(S.tx.filter(x=>x.type=='out')),val=S.hold.reduce((s,x)=>s+x.sh*x.px,0),cost=S.hold.reduce((s,x)=>s+x.sh*x.cost,0),M=S.meals.filter(x=>x.date==today()),q=D7();return {inc,ex,all,val,cost,t:k=>M.reduce((s,x)=>s+x[k],0),LS:S.sets.filter(x=>inR(x.date)),q,m:M6(),sm:k=>q.d.map(d=>S.meals.filter(x=>x.date==d).reduce((s,x)=>s+x[k],0))}}
+const R={
+bal:c=>card('Total balance',$$(c.all+c.val),`${$$(c.all)} cash · ${$$(c.val)} invested`),
+cash:c=>card('Net cash flow',$$(c.inc-c.ex),`${$$(c.inc)} in · ${$$(c.ex)} out`,c.inc-c.ex>=0?'good':'bad'),
+port:c=>card('Portfolio value',$$(c.val),S.hold.length?`${$$(c.val-c.cost)} all-time`:'No holdings yet',c.val-c.cost>=0?'good':'bad'),
+save:c=>card('Savings rate',c.inc?Math.round((c.inc-c.ex)/c.inc*100)+'%':'—','of income in period'),
+kcal:c=>card('Calories today',Math.round(c.t('k')),`of ${S.goals.kcal}`),
+prot:c=>card('Protein today',Math.round(c.t('p'))+'g',`of ${S.goals.p}g`),
+sets:c=>card('Sets logged',c.LS.length,'in this period'),
+txs:c=>`<div class='card'><b>Latest transactions</b>${S.tx.slice(-5).reverse().map(x=>`<div class='li'><i class='chip' style='background:#f1f2f4;color:#4b5058;font-weight:600'>${esc((x.desc[0]||'•').toUpperCase())}</i><div class='n'>${esc(x.desc)}<small>${esc(x.cat)} · ${x.date}</small></div><b class='${x.type=='in'?'good':''}'>${x.type=='in'?'+':'−'}${$$(x.amt).replace('−','')}</b></div>`).join('')||`<div class='empty'>No transactions yet.</div>`}</div>`,
+focus:c=>`<div class='card dark'><b>Today’s focus</b><p class='s'>${Math.max(0,S.goals.p-Math.round(c.t('p')))}g protein and ${Math.max(0,S.goals.kcal-Math.round(c.t('k')))} kcal left to hit today’s targets.</p>${bar(c.t('p')/S.goals.p*100)}<p><button class='btn' onclick='TC()'>Ask Claude</button></p></div>`,
+calc:c=>chc('Calories','Last 7 days',bars(c.sm('k'),c.q.dl),`◷ target ${S.goals.kcal}`),
+volc:c=>chc('Lifting volume','Last 7 days',lineC(c.q.d.map(d=>Math.round(S.sets.filter(x=>x.date==d).reduce((s,x)=>s+x.w*x.r,0))),c.q.dl),'◷ weight × reps'),
+spc:c=>chc('Spending','Last 6 months',bars(c.m.sp,c.m.ml),'◷ monthly total'),
+alloc:c=>{const v=S.hold.map(x=>[x.t,x.sh*x.px]).sort((a,b)=>b[1]-a[1]),t=v.reduce((s,x)=>s+x[1],0)||1;return `<div class='card'><b>Allocation</b>${v.map(([n,x])=>`<div class='row'><span>${esc(n)}</span>${bar(x/t*100)}<span>${Math.round(x/t*100)}%</span></div>`).join('')||`<div class='empty'>Add a holding.</div>`}</div>`},
+prs:c=>{const pr={};S.sets.forEach(x=>{const e=x.w*(1+x.r/30);if(!pr[x.ex]||e>pr[x.ex])pr[x.ex]=e});return `<div class='card'><b>Personal records</b><div class='s'>Estimated 1RM</div>${Object.entries(pr).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([n,e])=>`<div class='li'><div class='n'>${esc(n)}</div><b>${Math.round(e)}</b></div>`).join('')||`<div class='empty'>No lifts yet.</div>`}</div>`},
+macro:c=>`<div class='card'><b>Macro balance</b><div class='s'>Today vs targets</div>${[['Protein','p'],['Carbs','c'],['Fat','f']].map(([n,k])=>`<div class='row'><span>${n}</span>${bar(c.t(k)/S.goals[k]*100)}<span>${Math.round(c.t(k))}/${S.goals[k]}g</span></div>`).join('')}</div>`,
+note:c=>`<div class='card'><b>Notes</b><textarea class='nt' data-note placeholder='Jot anything…'>${esc(S.note||'')}</textarea></div>`};
+V.overview=function(){const c=CX(),L=lay(),vis=L.filter(x=>x.on),hid=L.filter(x=>!x.on);
+return ph(`Hello ${esc(S.profile?S.profile.name:'there')}, <span style='font-weight:400'>here’s your overview</span>`,new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}))+`<div class='rng'>${[['today','Today'],['week','Last week'],['month','Last month'],['year','Last year']].map(([r,n])=>`<button data-r='${r}' class='${r==rng?'on':''}'>${n}</button>`).join('')}<span class='sp'></span><button class='gh' data-a='E'>${ed?'Done':'Customize'}</button></div><div class='dash ${ed?'edit':''}'>${vis.map(x=>`<div class='w z${x.w}'>${ed?`<div class='tb'><button data-a='L' data-i='${x.id}'>◀</button><button data-a='R' data-i='${x.id}'>▶</button><button data-a='Z' data-i='${x.id}'>${x.w.toUpperCase()}</button><button data-a='H' data-i='${x.id}'>✕</button></div>`:''}${R[x.id](c)}</div>`).join('')||`<div class='empty' style='grid-column:1/-1'>No widgets yet. Click Customize to add some.</div>`}</div>${ed?`<h2>Add widgets</h2><div class='tray'>${hid.map(x=>`<button data-a='S' data-i='${x.id}'>+ ${WT[x.id]}</button>`).join('')||`<span class='s'>Every widget is on your dashboard.</span>`}</div>`:''}`};
+$('#main').addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a,i=b.dataset.i,L=lay(),k=L.findIndex(x=>x.id==i);if(a=='K'){showLock();return}
+if(a=='E')ed=!ed;else if(a=='H')L[k].on=false;else if(a=='S')L[k].on=true;else if(a=='Z')L[k].w={s:'m',m:'l',l:'s'}[L[k].w];else if(a=='L'||a=='R'){const v=L.map((x,j)=>x.on?j:-1).filter(j=>j>=0),o=v[v.indexOf(k)+(a=='L'?-1:1)];if(o!==undefined)[L[k],L[o]]=[L[o],L[k]]}
+save();render()});
+$('#main').addEventListener('input',e=>{if(e.target.dataset.note!==undefined){S.note=e.target.value;save()}});
+TABS.push(['cfg','Settings']);TI.cfg='h';
+V.cfg=function(){const p=S.profile||{};return ph('Settings','Profile, security and connections.')+`<h2>Profile</h2><form data-f='prof'><input name='name' value='${esc(p.name||'')}' placeholder='Your name'><button class='btn'>Save name</button><button type='button' class='btn' data-a='K'>Lock now</button></form><h2>Change passcode</h2><form data-f='pw'><input name='old' type='password' placeholder='Current passcode'><input name='nw' type='password' placeholder='New passcode (4+ characters)'><button class='btn'>Update</button></form><div class='s' style='margin-top:6px'>This is a screen lock for this app. Your data stays on this computer and isn’t encrypted, so keep Export backups somewhere safe.</div><h2>Connections</h2><div class='grid' style='grid-template-columns:repeat(auto-fit,minmax(260px,1fr))'>${UPC()}${AIC()}${DRV()}<div class='card'><b>MyFitnessPal</b><p><span class='pill'>Not available yet</span></p><div class='s'>There’s no official connector I can use yet. For now, log meals here or ask the in-app Claude.</div></div></div><h2>Import transactions (CSV)</h2><div class='card'><div class='s'>Save your Excel sheet as CSV with columns Date (YYYY-MM-DD), Description, Category, Amount. Negative amounts are expenses.</div><p><input type='file' accept='.csv' data-csv></p></div>`};
+$('#main').addEventListener('submit',async e=>{const f=e.target.dataset.f;if(!f)return;e.preventDefault();const d=Object.fromEntries(new FormData(e.target));
+if(f=='prof'){S.profile.name=(d.name||'').trim()||S.profile.name;save();toast('Saved');render()}
+if(f=='pw'){if(await hp(d.old,S.profile.salt)!=S.profile.hash)return toast('Current passcode is wrong');if((d.nw||'').length<4)return toast('Use at least 4 characters');S.profile.salt=rs();S.profile.hash=await hp(d.nw,S.profile.salt);save();toast('Passcode updated');e.target.reset()}});
+$('#main').addEventListener('change',e=>{if(e.target.dataset.csv===undefined)return;const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const Q=String.fromCharCode(34),rows=r.result.split(String.fromCharCode(10)).filter(l=>l.trim()).map(l=>l.split(',').map(s=>s.split(Q).join('').trim())),h=rows.shift().map(s=>s.toLowerCase()),ix=k=>h.findIndex(s=>s.includes(k)),di=ix('desc')>=0?ix('desc'):ix('name'),cj=ix('cat'),ai=ix('amount'),dt=ix('date');if(di<0||ai<0)return toast('Need Description and Amount columns');let n=0;rows.forEach(c=>{const a=parseFloat((c[ai]||'').replace(/[$,]/g,''));if(isNaN(a))return;S.tx.push({id:id(),date:/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(c[dt]||'')?c[dt]:today(),desc:c[di]||'Imported',cat:(cj>=0&&c[cj])||'Imported',amt:Math.abs(a),type:a<0?'out':'in'});n++});save();render();toast(n+' transactions imported')};r.readAsText(f);e.target.value=''});
+/* lock screen */
+const rs=()=>Array.from(crypto.getRandomValues(new Uint8Array(8)),b=>b.toString(16).padStart(2,'0')).join('');
+async function hp(p,s){try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s+':'+p));return Array.from(new Uint8Array(b),x=>x.toString(16).padStart(2,'0')).join('')}catch(e){let h=5381;for(const ch of s+':'+p)h=(h*33^ch.charCodeAt(0))>>>0;return 'f'+h}}
+{const lk=document.createElement('div');lk.id='lock';lk.hidden=true;document.body.append(lk)}
+function showLock(){const L=$('#lock'),p=S.profile,lg=`<div class='lg'>White <i>Glove</i></div>`;L.hidden=false;L.innerHTML=p?`<form data-l='in'>${lg}<p>Welcome back, ${esc(p.name)}.</p><input name='pw' type='password' placeholder='Passcode' autocomplete='current-password'><button class='btn'>Unlock</button><div class='err'></div><button type='button' class='lnk' data-reset>Forgot passcode? Reset the app</button></form>`:`<form data-l='new'>${lg}<p>Create your profile</p><input name='name' placeholder='Your name' required><input name='pw' type='password' placeholder='Passcode (4+ characters)' required><input name='pw2' type='password' placeholder='Confirm passcode' required><button class='btn'>Create profile</button><div class='err'></div></form>`;const i=L.querySelector('input');if(i)i.focus()}
+function unlock(){$('#lock').hidden=true;$('#lock').innerHTML='';render();if(S.drive){wg.watch(S.drive.path);setTimeout(()=>doSync(true),300)}}
+$('#lock').addEventListener('submit',async e=>{e.preventDefault();const f=e.target,d=Object.fromEntries(new FormData(f)),er=f.querySelector('.err');
+if(f.dataset.l=='new'){if(d.pw.length<4)return er.textContent='Use at least 4 characters.';if(d.pw!=d.pw2)return er.textContent='Passcodes don’t match.';const salt=rs();S.profile={name:d.name.trim(),salt,hash:await hp(d.pw,salt)};save();unlock()}
+else{if(await hp(d.pw,S.profile.salt)==S.profile.hash)unlock();else er.textContent='Incorrect passcode.'}});
+$('#lock').addEventListener('click',e=>{const a=e.target.closest('[data-reset]');if(!a)return;if(!a.dataset.c){a.dataset.c=1;a.textContent='Click again to erase everything and start over';return}try{localStorage.removeItem(K)}catch(x){}S={tx:[],hold:[],meals:[],sets:[],goals:{kcal:2800,p:200,c:300,f:80}};showLock()});
+/* Google Drive sync */
+function walk(o,f,d){d=d||0;if(o==null||d>8)return;f(o);if(typeof o=='object')for(const k in o)walk(o[k],f,d+1)}
+function skel(o,d){d=d||0;if(typeof o=='string')return o.length>60?o.slice(0,40)+'…('+o.length+' chars)':o;if(Array.isArray(o))return o.slice(0,3).map(x=>skel(x,d+1));if(o&&typeof o=='object'&&d<5){const r={};for(const k in o)r[k]=skel(o[k],d+1);return r}return o}
+function setStat(m,c,det){const e=$('#dstat');if(!e)return;e.style.color=c=='bad'?'':'var(--mut)';e.textContent=m;if(det){const p=document.createElement('pre');p.style.cssText='white-space:pre-wrap;font-size:11px;color:var(--mut)';p.textContent=JSON.stringify(det,null,1).slice(0,1500);e.append(p)}}
+function errMsg(e){return (e&&e.message)||'Something went wrong.'}
+
+
+async function pickFile(){try{const f=await wg.pickFile();if(!f)return;S.drive={path:f.path,name:f.name};save();await doSync();wg.watch(f.path)}catch(e){setStat(errMsg(e),'bad')}}
+function dropDrive(){['tx','hold','meals','sets'].forEach(k=>S[k]=S[k].filter(x=>x.src!='drive'))}
+const nz=s=>String(s==null?'':s).toLowerCase().replace(/[^a-z]/g,''),n2=v=>{const n=parseFloat(String(v).replace(/[$,]/g,''));return isNaN(n)?0:n};
+function dOf(v){if(typeof v=='number'&&v>20000)return new Date(Math.round((v-25569)*864e5)).toISOString().slice(0,10);const s=String(v||'').trim();if(/^[0-9]{4}-[0-9]{2}-[0-9]{2}/.test(s))return s.slice(0,10);const t=Date.parse(s);return isNaN(t)?today():dstr(new Date(t))}
+function ingest(wb){dropDrive();const c={tx:0,hold:0,meals:0,sets:0};
+wb.SheetNames.forEach(n=>{const rows=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:''}),hi=rows.findIndex(r=>r.filter(x=>x!=='').length>=2);if(hi<0)return;const H=rows[hi].map(nz),col=(...k)=>H.findIndex(h=>k.some(x=>h.includes(x))),body=rows.slice(hi+1).filter(r=>r.some(x=>x!==''));
+const ex=col('exercise','lift'),w=col('weight'),rp=col('reps','rep'),tk=col('ticker','symbol'),sh=col('shares','quantity','qty'),kc=col('calorie','kcal'),ml=col('meal','food'),am=col('amount'),ds=col('description','desc','payee','merchant','name'),dt=col('date');
+if(ex>=0&&w>=0&&rp>=0)body.forEach(r=>{S.sets.push({id:id(),src:'drive',date:dt>=0?dOf(r[dt]):today(),ex:String(r[ex]),w:n2(r[w]),r:n2(r[rp])});c.sets++});
+else if(tk>=0&&sh>=0){const cs=col('cost','basis','avg'),pr=col('price','last','current');body.forEach(r=>{const t=String(r[tk]).toUpperCase().trim();if(!t)return;S.hold.push({id:id(),src:'drive',t,sh:n2(r[sh]),cost:cs>=0?n2(r[cs]):0,px:pr>=0?n2(r[pr]):(cs>=0?n2(r[cs]):0)});c.hold++})}
+else if(kc>=0&&(ml>=0||ds>=0)){const p=col('protein'),cb=col('carb'),ft=col('fat');body.forEach(r=>{S.meals.push({id:id(),src:'drive',date:dt>=0?dOf(r[dt]):today(),name:String(r[ml>=0?ml:ds]),k:n2(r[kc]),p:p>=0?n2(r[p]):0,c:cb>=0?n2(r[cb]):0,f:ft>=0?n2(r[ft]):0});c.meals++})}
+else if(am>=0&&ds>=0){const ty=col('type'),ct=col('categ');body.forEach(r=>{if(r[am]==='')return;const a=n2(r[am]),y=ty>=0?nz(r[ty]):'',t=ty>=0?(y.startsWith('inc')||y.startsWith('dep')?'in':'out'):(a<0?'out':'in');S.tx.push({id:id(),src:'drive',date:dt>=0?dOf(r[dt]):today(),desc:String(r[ds]),cat:(ct>=0&&String(r[ct]))||'General',amt:Math.abs(a),type:t});c.tx++})}});
+return `${c.tx} transactions, ${c.hold} holdings, ${c.meals} meals, ${c.sets} sets`}
+async function doSync(quiet){const d=S.drive;if(!d)return;setStat('Syncing…');try{if(!window.XLSX)throw new Error('The spreadsheet reader didn’t load.');const b=await wg.readFile(d.path);if(!b)throw new Error('Couldn’t read that file. Is it still there?');const wb=XLSX.read(b,{type:'base64'});d.sum=ingest(wb);d.at=Date.now();save();render();toast('Synced: '+d.sum)}catch(e){if(quiet)toast(errMsg(e));else setStat(errMsg(e),'bad')}}
+
+
+function DRV(){const d=S.drive;return `<div class='card' id='drv'><b>Excel workbook</b><p><span class='pill'>${d?'Linked: '+esc(d.name):'Not linked'}</span></p>${d?`<div class='s'>${d.at?'Last synced '+new Date(d.at).toLocaleString()+' · '+esc(d.sum||''):'Not synced yet'}<br>${esc(d.path)}<br>Re-reads automatically whenever the file changes.</div><p><button class='btn' data-g='sync'>Sync now</button><button class='btn' data-g='pick'>Change file</button><button class='lnk' data-g='unlink'>Unlink</button></p>`:`<div class='s'>Pick your Excel file. If it lives in Google Drive, install Google Drive for desktop and choose the file from your Drive folder (usually the G: drive or Google Drive in File Explorer). White Glove then updates itself whenever Drive syncs a change.</div><p><button class='btn' data-g='pick'>Choose Excel file</button></p>`}<div class='err' id='dstat'></div><details class='s'><summary>Expected sheet layout</summary>Any sheet name works; tables are detected by their headers.<br>Transactions: Date, Description, Category, Amount (negative = expense, or add a Type column)<br>Holdings: Ticker, Shares, Cost, Price<br>Meals: Date, Meal, Calories, Protein, Carbs, Fat<br>Lifts: Date, Exercise, Weight, Reps</details></div>`}
+$('#main').addEventListener('click',e=>{const b=e.target.closest('[data-g]');if(!b)return;const g=b.dataset.g;if(g=='pick')pickFile();else if(g=='sync')doSync();else if(g=='unlink'){dropDrive();S.drive=null;save();wg.watch(null);render()}});
+
+showLock();
+render();
+
+wg.onFileChanged(()=>doSync(true));
+let HK=false;wg.hasKey().then(v=>{HK=v});
+function AIC(){return `<div class='card'><b>Claude · in-app chat</b><p><span class='pill'>${HK?'Key saved':'No key yet'}</span></p><div class='s'>Chat uses your own Anthropic API key, stored encrypted on this computer. Get one at console.anthropic.com.</div><form data-f='key' style='margin-top:10px'><input name='k' type='password' placeholder='${HK?'Replace API key':'sk-ant-…'}' autocomplete='off'><button class='btn'>Save key</button></form><form data-f='model' style='margin-top:8px'><input name='m' value='${esc(S.model||'claude-sonnet-5-5')}' placeholder='Model'><button class='btn'>Set model</button></form></div>`}
+$('#main').addEventListener('submit',async e=>{const f=e.target.dataset.f;if(f!='key'&&f!='model')return;e.preventDefault();const d=Object.fromEntries(new FormData(e.target));
+ if(f=='key'){const k=(d.k||'').trim();if(!k)return;const r=await wg.setKey(k);HK=!!r;toast(r?'Key saved':'Couldn’t store the key securely on this computer');render()}
+ else{S.model=(d.m||'').trim()||'claude-sonnet-5-5';save();toast('Model set')}});
+let UV={version:'',url:''};wg.updGet().then(v=>{UV=v});
+const UT={checking:'Checking for updates…',current:'You\u2019re on the latest version.',nofeed:'No update source set yet.',dev:'Updates only work in the installed app.',downloading:'Downloading update…',ready:'Update ready. Restart to install.'};
+function UPC(){return `<div class='card'><b>App updates</b><p><span class='pill'>Version ${esc(UV.version||'')}</span></p><div class='s' id='ups'>${UV.ready?UT.ready:'White Glove checks for updates automatically and installs them when you close the app.'}</div><form data-f='upd' style='margin-top:10px'><input name='u' value='${esc(UV.url||'')}' placeholder='Update source URL (provided by Claude)'><button class='btn'>Save &amp; check</button></form>${UV.ready?`<p><button class='btn' data-u='go'>Restart to update</button></p>`:''}</div>`}
+wg.onUpdate(o=>{if(o.state=='ready'){UV.ready=true;toast('Update ready. Restart from Settings to install.');if(tab=='cfg')render()}const e=$('#ups');if(!e)return;e.textContent=o.state=='error'?'Couldn\u2019t check for updates: '+(o.message||''):(UT[o.state]||'')+(o.version?' ('+o.version+')':'')+(o.pct!=null&&o.state=='downloading'?' '+o.pct+'%':'')});
+$('#main').addEventListener('submit',async e=>{if(e.target.dataset.f!='upd')return;e.preventDefault();await wg.updSet(new FormData(e.target).get('u'));UV=await wg.updGet();wg.updCheck()});
+$('#main').addEventListener('click',e=>{if(e.target.closest('[data-u=go]'))wg.updInstall()});
+/* Claude chat */
+const msgs=[],SYS=`You are Claude, the assistant built into "White Glove", Noah’s personal life dashboard (tabs: overview, fin, inv, nut, lift). Use the tools to log data or change things when asked; infer reasonable macros for foods and say your estimates. Answer questions from the data provided. Be brief and warm. If asked to change the app’s design or features, explain what you’d change and that Noah can take that back to the main Claude chat to iterate on the code.`;
+function bub(c,t){const d=document.createElement('div');d.className='m '+c;d.textContent=t;$('#log').append(d);$('#log').scrollTop=1e9;return d}
+const T=(name,description,props,fn)=>({name,description,inputSchema:{type:'object',properties:Object.fromEntries(Object.entries(props).map(([k,v])=>[k,{type:v}])),required:Object.keys(props)},execute:i=>{const r=fn(i);save();render();return r||'done'}});
+const TOOLS=[
+ T('add_transaction','Log income or expense',{description:'string',category:'string',amount:'number',type:'string'},i=>A.tx({desc:i.description,cat:i.category,amt:i.amount,type:i.type})),
+ T('save_holding','Add or update an investment holding',{ticker:'string',shares:'number',cost_per_share:'number',price:'number'},i=>A.hold({ticker:i.ticker,shares:i.shares,cost:i.cost_per_share,price:i.price})),
+ T('update_price','Update a holding’s current price',{ticker:'string',price:'number'},i=>A.price(i)?'updated':'ticker not found'),
+ T('log_meal','Log a meal for today',{name:'string',calories:'number',protein:'number',carbs:'number',fat:'number'},i=>A.meal({name:i.name,k:i.calories,p:i.protein,c:i.carbs,f:i.fat})),
+ T('log_set','Log a lifting set',{exercise:'string',weight:'number',reps:'number'},i=>A.set({ex:i.exercise,w:i.weight,r:i.reps})),
+ T('set_goals','Set daily macro targets',{calories:'number',protein:'number',carbs:'number',fat:'number'},i=>A.goals({kcal:i.calories,p:i.protein,c:i.carbs,f:i.fat})),
+ T('go_to','Open a tab: overview, fin, inv, nut, lift or cfg',{tab:'string'},i=>{if(V[i.tab])tab=i.tab}),
+ T('set_widget','Show or hide a dashboard widget by id',{id:'string',visible:'boolean'},i=>{const x=lay().find(w=>w.id==i.id);if(!x)return 'unknown id; valid: '+WD.map(w=>w[0]).join(', ');x.on=!!i.visible})
+];
+async function C(f){const i=f.elements.q,q=i.value.trim();if(!q)return false;i.value='';msgs.push({role:'user',content:q});bub('user',q);const b=bub('ai','…');
+ try{if(!HK){b.textContent='Add your Anthropic API key in Settings → Claude to turn on chat.';return false}
+  const data={...S,tx:S.tx.slice(-60),meals:S.meals.slice(-40),sets:S.sets.slice(-80)};delete data.profile;
+  const sys=SYS+'\nToday: '+today()+'\nData: '+JSON.stringify(data);
+  const h=msgs.slice(-12).map(m=>({role:m.role,content:m.content}));while(h.length&&h[0].role!='user')h.shift();
+  const defs=TOOLS.map(t=>({name:t.name,description:t.description,input_schema:t.inputSchema}));let text='';
+  for(let n=0;n<6;n++){const r=await wg.ai({model:S.model||'claude-sonnet-5-5',system:sys,messages:h,tools:defs});if(!r.ok)throw new Error(r.error);
+   const c=r.data.content||[];text=c.filter(x=>x.type=='text').map(x=>x.text).join('\n')||text;b.textContent=text||'…';
+   const tu=c.filter(x=>x.type=='tool_use');if(!tu.length||r.data.stop_reason!='tool_use')break;
+   h.push({role:'assistant',content:c});
+   h.push({role:'user',content:tu.map(u=>{let o;try{const t=TOOLS.find(x=>x.name==u.name);o=t?String(t.execute(u.input)):'unknown tool'}catch(e){o='error: '+e.message}return {type:'tool_result',tool_use_id:u.id,content:o}})})}
+  b.textContent=text||'Done.';msgs.push({role:'assistant',content:text||'Done.'});
+ }catch(e){b.textContent='Something went wrong'+(e&&e.message?': '+e.message:'.')}
+ $('#log').scrollTop=1e9;return false}
+bub('ai','Hi Noah. I can log meals, lifts, spending and holdings for you, or help you find things. Try: “Had a chicken burrito, roughly 700 calories.”');
+</script></body></html>
