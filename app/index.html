@@ -239,14 +239,15 @@ const MC={k:'#3b3a37',p:'#76736d',c:'#a5a29b',f:'#bdbab3'},MK=[['k','Calories'],
 const dayHit=d=>(S.hitsM&&S.hitsM[d])||{},hitCount=h=>MK.filter(([k])=>h[k]).length;
 function autoLock(){S.locks=S.locks||{};let ch=false;Object.keys(S.hitsM||{}).forEach(d=>{if(d<today()&&S.locks[d]==null){S.locks[d]=hitCount(S.hitsM[d]);ch=true}});if(ch)save()}
 function toggleMacro(k){S.hitsM=S.hitsM||{};const d=today(),h=S.hitsM[d]=S.hitsM[d]||{};if(h[k])delete h[k];else h[k]=1;if(!Object.keys(h).length)delete S.hitsM[d];if(S.locks&&S.locks[d]!=null)S.locks[d]=hitCount(dayHit(d));save()}
-function lineChart(pts){const W=640,Hh=210,L=34,R=14,T=14,B=30,n=pts.length,X=i=>n==1?(L+W-R)/2:L+i*((W-L-R)/(n-1)),Y=v=>T+(4-v)/4*(Hh-T-B);
- return `<svg viewBox="0 0 ${W} ${Hh}" width="100%">${[0,1,2,3,4].map(v=>`<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="#ececec"/><text x="${L-8}" y="${Y(v)+4}" font-size="11" text-anchor="end" fill="#6b6b6b">${v}</text>`).join('')}${n>1?`<polyline fill="none" stroke="#76736d" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" points="${pts.map((p,i)=>X(i)+','+Y(p[1])).join(' ')}"/>`:''}${pts.map((p,i)=>`<circle cx="${X(i)}" cy="${Y(p[1])}" r="4.5" fill="#fff" stroke="#76736d" stroke-width="2.5"><title>${p[0]}: ${p[1]} of 4</title></circle>`).join('')}${pts.map((p,i)=>(n<=12||i%Math.ceil(n/10)==0)?`<text x="${X(i)}" y="${Hh-8}" font-size="11" text-anchor="middle" fill="#6b6b6b">${+p[0].slice(5,7)}/${+p[0].slice(8)}</text>`:'').join('')}</svg>`}
-V.nut=()=>{autoLock();const G=S.goals,h=dayHit(today()),n=hitCount(h),tk=today(),lk=(S.locks||{})[tk]!=null;
- const pts=Object.entries(S.locks||{}).filter(([d,v])=>d<=tk).sort((a,b)=>a[0].localeCompare(b[0])).slice(-30);
+function lineChart(pts){const W=640,Hh=210,L=48,R=14,T=14,B=30,n=pts.length,mx=Math.max(...pts.map(p=>p[1]),1),st=[100,250,500,1000,2000].find(x=>mx/x<=5)||2000,top=Math.ceil(mx/st)*st,ticks=[];for(let v=0;v<=top;v+=st)ticks.push(v);const X=i=>n==1?(L+W-R)/2:L+i*((W-L-R)/(n-1)),Y=v=>T+(top-v)/top*(Hh-T-B);
+ return `<svg viewBox="0 0 ${W} ${Hh}" width="100%">${ticks.map(v=>`<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="#ececec"/><text x="${L-8}" y="${Y(v)+4}" font-size="11" text-anchor="end" fill="#6b6b6b">${v.toLocaleString()}</text>`).join('')}${n>1?`<polyline fill="none" stroke="#76736d" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" points="${pts.map((p,i)=>X(i)+','+Y(p[1])).join(' ')}"/>`:''}${pts.map((p,i)=>`<circle cx="${X(i)}" cy="${Y(p[1])}" r="4.5" fill="#fff" stroke="#76736d" stroke-width="2.5"><title>${p[0]}: ${p[1].toLocaleString()} kcal</title></circle>`).join('')}${pts.map((p,i)=>(n<=12||i%Math.ceil(n/10)==0)?`<text x="${X(i)}" y="${Hh-8}" font-size="11" text-anchor="middle" fill="#6b6b6b">${+p[0].slice(5,7)}/${+p[0].slice(8)}</text>`:'').join('')}</svg>`}
+V.nut=()=>{autoLock();const G=S.goals,h=dayHit(today()),n=hitCount(h),tk=today(),lk=(S.cal||{})[tk]!=null;
+ const pts=Object.entries(S.cal||{}).filter(([d,v])=>d<=tk).sort((a,b)=>a[0].localeCompare(b[0])).slice(-30);
  const card=([k,nm])=>{const on=!!h[k],v=G[k==='k'?'kcal':k],col=MC[k];return `<div class="card" style="text-align:center;border-top:3px solid ${col}"><div class="wt" style="color:#3b3a37;font-weight:600">${nm}</div><div data-mh="${k}" style="cursor:pointer;display:inline-block">${ring(on?1:0,v.toLocaleString()+(k=='k'?'':'g'),k=='k'?'kcal target':'target',150,col)}</div><div><button class="btn ${on?'':'ghost'}" data-mh="${k}" style="${on?'background:'+col:''};min-width:96px;justify-content:center">${on?'✓ Hit':'Hit'}</button></div><label class="sm" style="display:block;margin-top:10px">Target<input data-goal="${k=='k'?'kcal':k}" type="number" value="${v}" style="width:84px;text-align:center;margin-left:6px;color:var(--ink);font-size:13px;padding:4px 6px"></label></div>`};
- return hdr('Nutrition','Tap Hit when you hit a target. It resets every day.',`<div style="text-align:right"><button class="btn acc" data-act="lockday">${lk?'✓ Locked in · update':'Lock in today'}</button><div class="sm" style="margin-top:4px">${n} of 4 hit today</div></div>`)+
+ return hdr('Nutrition','Tap Hit when you hit a target. It resets every day.',`<form class="fm" data-f="calog" style="justify-content:flex-end"><input type="hidden" name="date" value="${tk}"><input name="kcal" type="number" min="0" placeholder="Calories today" value="${lk?S.cal[tk]:''}" style="width:130px"><button class="btn acc">${lk?'Update':'Log today'}</button></form>`)+
  `<div class="grid" style="grid-template-columns:repeat(4,minmax(0,1fr))">${MK.map(card).join('')}</div>
- <h2>Macros hit by day</h2><div class="card">${pts.length?lineChart(pts):'<div class="empty">Lock in a day to start your graph. Each locked day adds a point.</div>'}<div class="foot">A day is locked automatically at midnight if you hit anything, or tap Lock in today.</div></div>`};
+ <h2>Calories by day</h2><div class="card">${pts.length?lineChart(pts):'<div class="empty">Log your calories to start your graph. Each logged day adds a point.</div>'}</div>
+ <h2>Logs</h2><div class="card">${pts.length?[...pts].reverse().map(([d,v])=>`<div class="row" style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--line,#ececec)"><span>${new Date(d+'T12:00').toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'})}</span><span style="display:flex;gap:14px;align-items:center"><b style="font-weight:600">${v.toLocaleString()} kcal</b><span data-calx="${d}" title="Delete log" style="cursor:pointer;color:var(--mut)">✕</span></span></div>`).join(''):'<div class="empty">No logs yet.</div>'}<form class="fm" data-f="calog" style="margin-top:10px"><input name="date" type="date" max="${tk}" value="${tk}" required><input name="kcal" type="number" min="0" placeholder="Calories" required style="width:120px"><button class="btn ghost">Add / update day</button></form></div>`};
 /* ---------- lifting split ---------- */
 const DAYS=['Mon','Tue','Wed','Thu','Fri'],DFULL={Mon:'Monday',Tue:'Tuesday',Wed:'Wednesday',Thu:'Thursday',Fri:'Friday'};
 const PRE={'Push / Pull / Legs':['Push','Pull','Legs','Push','Pull','Legs','Rest'],'Upper / Lower':['Upper','Lower','Rest','Upper','Lower','Rest','Rest'],'Bro split':['Chest','Back','Legs','Shoulders','Arms','Rest','Rest'],'Full body':['Full body','Rest','Full body','Rest','Full body','Rest','Rest']};
@@ -463,7 +464,8 @@ function maskAmts(root){if(!root)return;const w=document.createTreeWalker(root,N
 function setAmt(sp,show){sp.dataset.s=show?'1':'';sp.firstChild.textContent=show?sp.dataset.v:'$***';const e=sp.lastChild;e.innerHTML=ic(show?'eyeoff':'eye',13);e.title=show?'Hide':'Show'}
 function render(){renderTB();renderSide();const m=$('#main');m.className=tab=='sheets'?'flush':'';m.innerHTML=V[tab]();maskAmts(m);maskAmts($('#side'));if(tab=='sheets'&&G.wb)markSel()}
 /* ---------- events ---------- */
-document.addEventListener('click',e=>{
+document.addEventListener('click',e=>{const cx=e.target.closest&&e.target.closest('[data-calx]');if(cx){const k=cx.dataset.calx;if(S.cal)delete S.cal[k];if(S.locks)delete S.locks[k];save();render();toast("Log deleted");return}
+
  const ey=e.target.closest('.eye');if(ey){e.preventDefault();e.stopPropagation();const sp=ey.closest('.amt');setAmt(sp,!sp.dataset.s);return}
  const g=e.target.closest('[data-go]');if(g){go(g.dataset.go);return}
  const td=e.target.closest('#grid td[data-r]');if(td){const r=+td.dataset.r,c=+td.dataset.c;if(G.edit&&G.edit.r==r&&G.edit.c==c)return;if(G.edit)endEdit(true);G.sel=[r,c];markSel();return}
@@ -506,7 +508,7 @@ function act(a){switch(a){
 case 'txcsv':$('#txf').click();break;case 'import':$('#bkf').click();break;
  case 'export':wg.saveFile('white-glove-backup.json',JSON.stringify(S,null,2)).then(r=>r&&toast('Backup saved')).catch(()=>toast('Export failed'));break;
  case 'chrefresh':chartRefresh(true);break;
- case 'lockday':{S.locks=S.locks||{};S.locks[today()]=hitCount(dayHit(today()));save();render();toast('Locked in');break}
+ 
  case 'px':refreshPx(false);break;
  case 'gsignin':toast('Opening your browser\u2026');wg.gSignin().then(async r=>{await gRefresh();toast(r.ok?'Google connected':(r.error||'Sign-in failed'));render()});break;
  case 'gsignout':wg.gSignout().then(async()=>{await gRefresh();render()});break;
@@ -532,6 +534,7 @@ document.addEventListener('submit',async e=>{const f=e.target.dataset.f;if(!f&&e
  else if(f=='key'){const k=(d.k||'').trim();if(!k)return;const r=await wg.setKey(k);HK=!!r;toast(r?'Key saved':'Couldn\u2019t store the key securely on this computer');render()}
  else if(f=='model'){S.model=(d.m||'').trim()||'claude-sonnet-5-5';save();toast('Model set')}
  else if(f=='gcfg'){const r=await wg.gConfig(d.cid,d.sec);await gRefresh();toast(r?'Saved':'Couldn\u2019t store this securely on this computer');render()}
+ else if(f=='calog'){const k=Math.round(+d.kcal);if(d.date&&k>=0&&!isNaN(k)){S.cal=S.cal||{};S.cal[d.date]=k;save();render();toast('Logged')}}
  else if(f=='chsym'){const t=String(d.t||'').toUpperCase().replace(/[^A-Z0-9.\-^=]/g,'');if(t){S.watch=S.watch||[];if(!heldSyms().includes(t)&&!S.watch.includes(t))S.watch.push(t);save();render();chartRefresh()}}
  else if(f=='fundhold'){const l=String(d.list||'').toUpperCase().split(/[\s,;]+/).map(x=>x.replace(/[^A-Z0-9.\-^=]/g,'')).filter(Boolean).slice(0,10);S.fundHold=S.fundHold||{};if(l.length)S.fundHold[d.sym]=l;else delete S.fundHold[d.sym];save();chartRefresh(true);render()}
  else if(f=='upd'){await wg.updSet(d.u);UV=await wg.updGet();wg.updCheck()}});
