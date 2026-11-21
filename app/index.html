@@ -11,6 +11,7 @@ html,body{height:100%;margin:0;overflow:hidden}
 body{font:14px/1.5 'Segoe UI',system-ui,sans-serif;color:var(--ink);background:var(--side)}
 button{font:inherit;color:inherit}
 ::selection{background:rgba(125,135,148,.25)}
+.amt{white-space:nowrap}.eye{cursor:pointer;display:inline-flex;vertical-align:middle;margin-left:6px;color:var(--mut);opacity:.65;font-style:normal;font-family:'Segoe UI',sans-serif;font-weight:400}.eye:hover{opacity:1}
 .good{color:var(--good)}.bad{color:var(--bad)}
 /* title bar */
 #tb{position:fixed;top:0;left:0;right:0;height:40px;background:var(--side);display:flex;align-items:center;padding:0 150px 0 10px;-webkit-app-region:drag;z-index:60;user-select:none}
@@ -145,7 +146,7 @@ let S={tx:[],hold:[],meals:[],sets:[],goals:{kcal:2800,p:200,c:300,f:80}};
 try{const r=localStorage.getItem(K);if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}
 const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}};
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const usd=n=>S.hide?'***':(n<0?'\u2212':'')+'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:Number.isInteger(n)?0:2,maximumFractionDigits:2});
+const usd=n=>'\uE000'+(n<0?'\u2212':'')+'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:Number.isInteger(n)?0:2,maximumFractionDigits:2})+'\uE001';
 const uid=()=>Date.now()+Math.random(),num=v=>{const n=parseFloat(String(v).replace(/[$,]/g,''));return isNaN(n)?0:n};
 const pad=n=>String(n).padStart(2,'0'),dstr=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()),today=()=>dstr(new Date()),parseD=s=>new Date(s+'T00:00');
 const age=d=>Math.round((parseD(today())-parseD(d))/864e5);
@@ -410,11 +411,17 @@ setInterval(gsPoll,5000);window.addEventListener('focus',gsPoll);
 let tab='overview',hist=['overview'],hi=0;
 function go(t,push){if(!V[t])return;if(G.edit)endEdit(true);if(push!==false&&t!==tab){hist=hist.slice(0,hi+1);hist.push(t);hi=hist.length-1}tab=t;render()}
 function recents(){const a=[];S.tx.filter(x=>!x.src).forEach(x=>a.push({id:x.id,t:`${x.desc} \u00b7 ${x.type=='in'?'+':'\u2212'}${usd(x.amt).replace('\u2212','')}`,tab:'fin'}));S.meals.filter(x=>!x.src).forEach(x=>a.push({id:x.id,t:`${x.name} \u00b7 ${x.k} kcal`,tab:'nut'}));S.sets.filter(x=>!x.src).forEach(x=>a.push({id:x.id,t:`${x.ex} ${x.w}\u00d7${x.r}`,tab:'lift'}));S.hold.filter(x=>!x.src).forEach(x=>a.push({id:x.id,t:`${x.t} \u00b7 ${x.sh} sh`,tab:'inv'}));return a.sort((p,q)=>q.id-p.id).slice(0,6)}
-function renderTB(){const n=(TABS.find(t=>t[0]==tab)||[])[1]||'';$('#tb').innerHTML=`<button class="ib" data-act="side" title="Toggle sidebar">${ic('side')}</button><button class="ib" data-act="back" title="Back"${hi<=0?' disabled':''}>${ic('back')}</button><button class="ib" data-act="fwd" title="Forward"${hi>=hist.length-1?' disabled':''}>${ic('fwd')}</button><div class="seg"><button data-act="home" title="Dashboard" class="${document.body.classList.contains('chat')?'':'on'}">${ic('grid',17)}</button><button data-act="chat" title="Ask Claude" class="${document.body.classList.contains('chat')?'on':''}">${ic('chat',17)}</button></div><span class="tt">${n}</span><span style="flex:1"></span><button class="ib" data-act="hide" title="${S.hide?'Show':'Hide'} balances">${ic(S.hide?'eyeoff':'eye')}</button>`}
+function renderTB(){const n=(TABS.find(t=>t[0]==tab)||[])[1]||'';$('#tb').innerHTML=`<button class="ib" data-act="side" title="Toggle sidebar">${ic('side')}</button><button class="ib" data-act="back" title="Back"${hi<=0?' disabled':''}>${ic('back')}</button><button class="ib" data-act="fwd" title="Forward"${hi>=hist.length-1?' disabled':''}>${ic('fwd')}</button><div class="seg"><button data-act="home" title="Dashboard" class="${document.body.classList.contains('chat')?'':'on'}">${ic('grid',17)}</button><button data-act="chat" title="Ask Claude" class="${document.body.classList.contains('chat')?'on':''}">${ic('chat',17)}</button></div><span class="tt">${n}</span><span style="flex:1"></span><button class="ib" data-act="hide" title="${REVEAL?'Hide':'Show'} all amounts">${ic(REVEAL?'eyeoff':'eye')}</button>`}
 function renderSide(){const p=S.profile,r=recents();$('#side').innerHTML=`<div class="logo">White <i>Glove</i></div><nav>${TABS.map(([k,n,i])=>`<button data-go="${k}" class="${k==tab?'on':''}">${ic(i)}<span>${n}</span></button>`).join('')}</nav>${r.length?`<div class="lbl">Recents</div><div class="rec">${r.map(x=>`<button data-go="${x.tab}" title="${esc(x.t)}">${esc(x.t)}</button>`).join('')}</div>`:''}<div class="grow"></div><div class="urow"><button class="u" data-go="cfg"><span class="av">${esc(((p&&p.name)||'N')[0].toUpperCase())}</span><span class="un">${esc((p&&p.name)||'You')}</span></button><button class="ib" data-act="lock" title="Lock">${ic('lock',16)}</button></div>`}
-function render(){renderTB();renderSide();const m=$('#main');m.className=tab=='sheets'?'flush':'';m.innerHTML=V[tab]();if(tab=='sheets'&&G.wb)markSel()}
+let REVEAL=false;
+function maskAmts(root){if(!root)return;const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),L=[];while(w.nextNode())if(w.currentNode.nodeValue.indexOf('\uE000')>=0)L.push(w.currentNode);
+ L.forEach(n=>{const f=document.createDocumentFragment();n.nodeValue.split(/(\uE000[^\uE001]*\uE001)/).forEach(p=>{if(p[0]=='\uE000'){const v=p.slice(1,-1),sp=document.createElement('span');sp.className='amt';sp.dataset.v=v;sp.innerHTML='<span class="av2"></span><i class="eye" role="button"></i>';f.append(sp);setAmt(sp,REVEAL)}else if(p)f.append(p)});n.replaceWith(f)});
+ root.querySelectorAll('[title]').forEach(e=>{if(e.title.indexOf('\uE000')>=0)e.title=e.title.replace(/\uE000[^\uE001]*\uE001/g,'***')})}
+function setAmt(sp,show){sp.dataset.s=show?'1':'';sp.firstChild.textContent=show?sp.dataset.v:'***';const e=sp.lastChild;e.innerHTML=ic(show?'eyeoff':'eye',13);e.title=show?'Hide':'Show'}
+function render(){renderTB();renderSide();const m=$('#main');m.className=tab=='sheets'?'flush':'';m.innerHTML=V[tab]();maskAmts(m);maskAmts($('#side'));if(tab=='sheets'&&G.wb)markSel()}
 /* ---------- events ---------- */
 document.addEventListener('click',e=>{
+ const ey=e.target.closest('.eye');if(ey){e.preventDefault();e.stopPropagation();const sp=ey.closest('.amt');setAmt(sp,!sp.dataset.s);return}
  const g=e.target.closest('[data-go]');if(g){go(g.dataset.go);return}
  const td=e.target.closest('#grid td[data-r]');if(td){const r=+td.dataset.r,c=+td.dataset.c;if(G.edit&&G.edit.r==r&&G.edit.c==c)return;if(G.edit)endEdit(true);G.sel=[r,c];markSel();return}
  const nd=e.target.closest('[data-nd]');if(nd){const v=+nd.dataset.nd;NUT.date=v==0?today():(()=>{const n=addDays(NUT.date,v);return n>today()?today():n})();render();return}
@@ -427,7 +434,7 @@ document.addEventListener('click',e=>{
  const ch=e.target.closest('[data-chip]');if(ch){$('#cf input').value=ch.textContent;$('#cf').requestSubmit();return}
  const b=e.target.closest('[data-act]');if(!b)return;act(b.dataset.act)});
 function act(a){switch(a){
- case 'hide':S.hide=!S.hide;save();render();break;
+ case 'hide':REVEAL=!REVEAL;render();break;
  case 'side':document.body.classList.toggle('nosb');renderTB();break;
  case 'chat':document.body.classList.toggle('chat');renderTB();if(document.body.classList.contains('chat'))setTimeout(()=>$('#cf input').focus(),50);break;
  case 'home':document.body.classList.remove('chat');go('overview');break;
