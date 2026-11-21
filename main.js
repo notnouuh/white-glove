@@ -147,6 +147,22 @@ ipcMain.handle('g:api', async (_e, m, u, b) => {
     }
   } catch (e) { return { ok: false, error: String(e.message || e) }; }
 });
+
+/* ---- live market prices (public data, no account) ---- */
+ipcMain.handle('px:get', async (_e, list) => {
+  const out = {}, syms = [...new Set((list || []).map(s => String(s).toUpperCase().replace(/[^A-Z0-9.\-^=]/g, '')).filter(Boolean))].slice(0, 60);
+  await Promise.all(syms.map(async t => {
+    try {
+      const r = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(t) + '?range=1d&interval=1d', { headers: { 'user-agent': 'Mozilla/5.0' } });
+      if (r.ok) { const j = await r.json(), m = j.chart && j.chart.result && j.chart.result[0] && j.chart.result[0].meta; if (m && m.regularMarketPrice > 0) { out[t] = { p: m.regularMarketPrice, prev: m.previousClose || m.chartPreviousClose || 0, at: (m.regularMarketTime || 0) * 1000 }; return; } }
+    } catch {}
+    try {
+      const r = await fetch('https://stooq.com/q/l/?s=' + encodeURIComponent(t.toLowerCase()) + '.us&f=sd2t2ohlcv&h&e=csv');
+      if (r.ok) { const row = ((await r.text()).trim().split(/\r?\n/)[1] || '').split(','), c = parseFloat(row[6]); if (c > 0) out[t] = { p: c, prev: 0, at: Date.now() }; }
+    } catch {}
+  }));
+  return out;
+});
 ipcMain.handle('key:has', async () => fs.existsSync(keyFile()));
 ipcMain.handle('key:set', async (_e, k) => {
   if (!safeStorage.isEncryptionAvailable()) return false;
