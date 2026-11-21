@@ -245,8 +245,9 @@ function lineChart(pts){const W=640,Hh=210,L=48,R=14,T=14,B=30,n=pts.length,mx=M
 V.nut=()=>{autoLock();const G=S.goals,h=dayHit(today()),n=hitCount(h),tk=today(),lk=(S.cal||{})[tk]!=null;
  const pts=Object.entries(S.cal||{}).filter(([d,v])=>d<=tk).sort((a,b)=>a[0].localeCompare(b[0])).slice(-30);
  const card=([k,nm])=>{const on=!!h[k],v=G[k==='k'?'kcal':k],col=MC[k];return `<div class="card" style="text-align:center;border-top:3px solid ${col}"><div class="wt" style="color:#3b3a37;font-weight:600">${nm}</div><div data-mh="${k}" style="cursor:pointer;display:inline-block">${ring(on?1:0,v.toLocaleString()+(k=='k'?'':'g'),k=='k'?'kcal target':'target',150,col)}</div><div><button class="btn ${on?'':'ghost'}" data-mh="${k}" style="${on?'background:'+col:''};min-width:96px;justify-content:center">${on?'✓ Hit':'Hit'}</button></div><label class="sm" style="display:block;margin-top:10px">Target<input data-goal="${k=='k'?'kcal':k}" type="number" value="${v}" style="width:84px;text-align:center;margin-left:6px;color:var(--ink);font-size:13px;padding:4px 6px"></label></div>`};
- return hdr('Nutrition','Tap Hit when you hit a target. It resets every day.',`<form class="fm" data-f="calog" style="justify-content:flex-end"><input type="hidden" name="date" value="${tk}"><input name="kcal" type="number" min="0" placeholder="Calories today" value="${lk?S.cal[tk]:''}" style="width:130px"><button class="btn acc">${lk?'Update':'Log today'}</button></form>`)+
+ return hdr('Nutrition','Tap Hit when you hit a target. It resets every day.','')+
  `<div class="grid" style="grid-template-columns:repeat(4,minmax(0,1fr))">${MK.map(card).join('')}</div>
+ <div style="margin-top:10px"><button class="btn ghost" data-act="resettoday">Reset today</button></div>
  <h2>Calories by day</h2><div class="card">${pts.length?lineChart(pts):'<div class="empty">Log your calories to start your graph. Each logged day adds a point.</div>'}</div>
  <h2>Logs</h2><div class="card">${pts.length?[...pts].reverse().map(([d,v])=>`<div class="row" style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--line,#ececec)"><span>${new Date(d+'T12:00').toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'})}</span><span style="display:flex;gap:14px;align-items:center"><b style="font-weight:600">${v.toLocaleString()} kcal</b><span data-calx="${d}" title="Delete log" style="cursor:pointer;color:var(--mut)">✕</span></span></div>`).join(''):'<div class="empty">No logs yet.</div>'}<form class="fm" data-f="calog" style="margin-top:10px"><input name="date" type="date" max="${tk}" value="${tk}" required><input name="kcal" type="number" min="0" placeholder="Calories" required style="width:120px"><button class="btn ghost">Add / update day</button></form></div>`};
 /* ---------- lifting split ---------- */
@@ -510,6 +511,7 @@ function act(a){switch(a){
  case 'dc':if(confirm('Delete column '+colN(G.sel[1])+'?')){if(G.gs)gsStruct('dc',G.sel[1]);else{shift('dc',G.sel[1]);paintGrid()}}break;
 case 'txcsv':$('#txf').click();break;case 'import':$('#bkf').click();break;
  case 'export':wg.saveFile('white-glove-backup.json',JSON.stringify(S,null,2)).then(r=>r&&toast('Backup saved')).catch(()=>toast('Export failed'));break;
+ case 'resettoday':if(S.hitsM)delete S.hitsM[today()];if(S.cal)delete S.cal[today()];if(S.locks)delete S.locks[today()];save();render();toast('Today reset');break;
  case 'chrefresh':chartRefresh(true);break;
  
  case 'px':refreshPx(false);break;
