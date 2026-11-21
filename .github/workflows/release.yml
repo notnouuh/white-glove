@@ -1,0 +1,55 @@
+name: Release
+on:
+  push:
+    branches: [main]
+    paths: ['main.js', 'preload.js', 'updater.js', 'package.json', 'app/**', 'build/**', 'installer/**', '.github/workflows/release.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Read version
+        id: v
+        shell: bash
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Already released?
+        id: ex
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "v${{ steps.v.outputs.version }}" >/dev/null 2>&1; then echo "exists=true" >> "$GITHUB_OUTPUT"; else echo "exists=false" >> "$GITHUB_OUTPUT"; fi
+      - name: Install
+        if: steps.ex.outputs.exists == 'false'
+        run: npm install --no-audit --no-fund
+      - name: Package app
+        if: steps.ex.outputs.exists == 'false'
+        run: npx electron-builder --dir --win --x64
+      - name: Install NSIS
+        if: steps.ex.outputs.exists == 'false'
+        run: choco install nsis -y --no-progress
+      - name: Build installer
+        if: steps.ex.outputs.exists == 'false'
+        working-directory: installer
+        run: '& "C:\Program Files (x86)\NSIS\makensis.exe" /DVERSION=${{ steps.v.outputs.version }} installer.nsi'
+      - name: Write latest.json
+        if: steps.ex.outputs.exists == 'false'
+        shell: bash
+        run: |
+          V="${{ steps.v.outputs.version }}"
+          node -e "const c=require('crypto'),f=require('fs');const n='White-Glove-Setup-$V.exe';const h=c.createHash('sha256').update(f.readFileSync('release/'+n)).digest('hex');f.writeFileSync('release/latest.json',JSON.stringify({version:'$V',file:n,sha256:h}))"
+          cat release/latest.json
+      - name: Publish release
+        if: steps.ex.outputs.exists == 'false'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V="${{ steps.v.outputs.version }}"
+          gh release create "v$V" "release/White-Glove-Setup-$V.exe" release/latest.json --title "White Glove $V" --notes "Automated build of White Glove $V."

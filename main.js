@@ -1,7 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog, safeStorage, shell } = require('electron');
 const path = require('path'), fs = require('fs');
 const { create: createUpdater } = require('./updater');
-const DEFAULT_FEED = '';
+const DEFAULT_FEED = 'https://github.com/notnouuh/white-glove/releases/latest/download';
 const updFile = () => path.join(app.getPath('userData'), 'update.json');
 const feedUrl = () => { try { return JSON.parse(fs.readFileSync(updFile(), 'utf8')).url || DEFAULT_FEED; } catch { return DEFAULT_FEED; } };
 const sendUpd = o => win && !win.isDestroyed() && win.webContents.send('upd', o);
