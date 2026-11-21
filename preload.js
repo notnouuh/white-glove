@@ -17,5 +17,10 @@ contextBridge.exposeInMainWorld('wg', {
   updCheck: () => ipcRenderer.invoke('upd:check'),
   updInstall: () => ipcRenderer.invoke('upd:install'),
   onUpdate: f => { ucb = f; },
+  gStatus: () => ipcRenderer.invoke('g:status'),
+  gConfig: (c, s) => ipcRenderer.invoke('g:config', c, s),
+  gSignin: () => ipcRenderer.invoke('g:signin'),
+  gSignout: () => ipcRenderer.invoke('g:signout'),
+  gApi: (m, u, b) => ipcRenderer.invoke('g:api', m, u, b),
   ai: b => ipcRenderer.invoke('ai:send', b)
 });

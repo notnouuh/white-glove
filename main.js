@@ -1,5 +1,5 @@
 const { app, BrowserWindow, ipcMain, dialog, safeStorage, shell } = require('electron');
-const path = require('path'), fs = require('fs');
+const path = require('path'), fs = require('fs'), http = require('http'), crypto = require('crypto');
 const { create: createUpdater } = require('./updater');
 const DEFAULT_FEED = 'https://github.com/notnouuh/white-glove/releases/latest/download';
 const updFile = () => path.join(app.getPath('userData'), 'update.json');
@@ -81,6 +81,71 @@ ipcMain.handle('file:watch', async (_e, p) => {
     clearTimeout(timer);
     timer = setTimeout(() => win && win.webContents.send('file:changed'), 1500);
   });
+});
+
+/* ---- Google OAuth (loopback + PKCE) ---- */
+const gFile = () => path.join(app.getPath('userData'), 'google.bin');
+const gGet = () => { try { return JSON.parse(safeStorage.decryptString(fs.readFileSync(gFile()))); } catch { return {}; } };
+const gPut = o => { if (!safeStorage.isEncryptionAvailable()) return false; fs.writeFileSync(gFile(), safeStorage.encryptString(JSON.stringify(o))); return true; };
+let gTok = { t: '', exp: 0 };
+const gForm = o => ({ method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(o) });
+async function gAccess() {
+  if (gTok.t && Date.now() < gTok.exp - 60000) return gTok.t;
+  const g = gGet(); if (!g.rt) throw new Error('Not signed in to Google.');
+  const r = await fetch('https://oauth2.googleapis.com/token', gForm({ client_id: g.cid, client_secret: g.sec || '', refresh_token: g.rt, grant_type: 'refresh_token' }));
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) { if (j.error === 'invalid_grant') { delete g.rt; gPut(g); } throw new Error(j.error_description || j.error || 'Google sign-in failed'); }
+  gTok = { t: j.access_token, exp: Date.now() + j.expires_in * 1000 }; return gTok.t;
+}
+ipcMain.handle('g:status', async () => { const g = gGet(); return { cfg: !!g.cid, signed: !!g.rt, email: g.email || '', cid: g.cid || '' }; });
+ipcMain.handle('g:config', async (_e, cid, sec) => {
+  const g = gGet(); cid = String(cid || '').trim(); sec = String(sec || '').trim();
+  if (cid !== g.cid) { delete g.rt; delete g.email; gTok = { t: '', exp: 0 }; }
+  g.cid = cid; if (sec) g.sec = sec; return gPut(g);
+});
+ipcMain.handle('g:signout', async () => { const g = gGet(); delete g.rt; delete g.email; gTok = { t: '', exp: 0 }; gPut(g); return true; });
+ipcMain.handle('g:signin', async () => {
+  const g = gGet(); if (!g.cid) return { ok: false, error: 'Save your Client ID first.' };
+  try {
+    const ver = crypto.randomBytes(32).toString('base64url'), ch = crypto.createHash('sha256').update(ver).digest('base64url'), state = crypto.randomBytes(8).toString('hex');
+    let redir = '', to;
+    const code = await new Promise((resolve, reject) => {
+      const srv = http.createServer((q, s) => {
+        const u = new URL(q.url, 'http://127.0.0.1');
+        if (u.pathname !== '/') { s.writeHead(404); s.end(); return; }
+        const c = u.searchParams.get('code'), er = u.searchParams.get('error');
+        s.writeHead(200, { 'content-type': 'text/html' });
+        s.end('<body style="font:16px sans-serif;text-align:center;margin-top:20vh">' + (c ? 'White Glove is connected. You can close this tab.' : 'Sign-in cancelled. You can close this tab.') + '</body>');
+        clearTimeout(to); srv.close();
+        if (u.searchParams.get('state') !== state) return reject(new Error('Sign-in was interrupted.'));
+        c ? resolve(c) : reject(new Error(er || 'Sign-in cancelled.'));
+      });
+      srv.listen(0, '127.0.0.1', () => {
+        redir = 'http://127.0.0.1:' + srv.address().port;
+        const url = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({ client_id: g.cid, redirect_uri: redir, response_type: 'code', scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.metadata.readonly', code_challenge: ch, code_challenge_method: 'S256', access_type: 'offline', prompt: 'consent', state });
+        shell.openExternal(url);
+      });
+      to = setTimeout(() => { srv.close(); reject(new Error('Sign-in timed out.')); }, 180000);
+    });
+    const r = await fetch('https://oauth2.googleapis.com/token', gForm({ code, client_id: g.cid, client_secret: g.sec || '', code_verifier: ver, redirect_uri: redir, grant_type: 'authorization_code' }));
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.refresh_token) return { ok: false, error: j.error_description || j.error || 'Google didn’t return a sign-in. Try again.' };
+    g.rt = j.refresh_token; gTok = { t: j.access_token, exp: Date.now() + j.expires_in * 1000 };
+    try { const a = await fetch('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)', { headers: { authorization: 'Bearer ' + j.access_token } }); g.email = ((await a.json()).user || {}).emailAddress || ''; } catch {}
+    return gPut(g) ? { ok: true } : { ok: false, error: 'Couldn’t store the sign-in securely on this computer.' };
+  } catch (e) { return { ok: false, error: String(e.message || e) }; }
+});
+ipcMain.handle('g:api', async (_e, m, u, b) => {
+  try {
+    if (!['GET', 'POST'].includes(m) || !/^https:\/\/(sheets\.googleapis\.com\/v4\/spreadsheets\/|www\.googleapis\.com\/drive\/v3\/(files|about))/.test(String(u))) return { ok: false, error: 'Blocked request.' };
+    for (let a = 0; a < 2; a++) {
+      const t = await gAccess();
+      const r = await fetch(u, { method: m, headers: Object.assign({ authorization: 'Bearer ' + t }, b ? { 'content-type': 'application/json' } : {}), body: b ? JSON.stringify(b) : undefined });
+      if (r.status === 401 && a === 0) { gTok = { t: '', exp: 0 }; continue; }
+      const j = await r.json().catch(() => ({}));
+      return r.ok ? { ok: true, data: j } : { ok: false, status: r.status, error: (j.error && j.error.message) || ('Google error ' + r.status) };
+    }
+  } catch (e) { return { ok: false, error: String(e.message || e) }; }
 });
 ipcMain.handle('key:has', async () => fs.existsSync(keyFile()));
 ipcMain.handle('key:set', async (_e, k) => {
