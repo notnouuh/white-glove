@@ -14,9 +14,9 @@ const keyFile = () => path.join(app.getPath('userData'), 'anthropic.key');
 function create() {
   win = new BrowserWindow({
     width: 1240, height: 820, minWidth: 900, minHeight: 600,
-    backgroundColor: '#F7F6F3', icon: path.join(__dirname, 'build', 'icon.png'), title: 'White Glove', autoHideMenuBar: true,
+    backgroundColor: '#FAFAFA', icon: path.join(__dirname, 'build', 'icon.png'), title: 'White Glove', autoHideMenuBar: true,
     titleBarStyle: 'hidden',
-    titleBarOverlay: { color: '#F7F6F3', symbolColor: '#3D3D3A', height: 40 },
+    titleBarOverlay: { color: '#FAFAFA', symbolColor: '#3D3D3A', height: 40 },
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: false }
   });
   win.setMenuBarVisibility(false);
