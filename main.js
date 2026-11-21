@@ -14,9 +14,9 @@ const keyFile = () => path.join(app.getPath('userData'), 'anthropic.key');
 function create() {
   win = new BrowserWindow({
     width: 1240, height: 820, minWidth: 900, minHeight: 600,
-    backgroundColor: '#FAF9F5', icon: path.join(__dirname, 'build', 'icon.png'), title: 'White Glove', autoHideMenuBar: true,
+    backgroundColor: '#F7F6F3', icon: path.join(__dirname, 'build', 'icon.png'), title: 'White Glove', autoHideMenuBar: true,
     titleBarStyle: 'hidden',
-    titleBarOverlay: { color: '#F0EEE6', symbolColor: '#3D3D3A', height: 36 },
+    titleBarOverlay: { color: '#F7F6F3', symbolColor: '#3D3D3A', height: 40 },
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: false }
   });
   win.setMenuBarVisibility(false);
@@ -45,7 +45,27 @@ ipcMain.handle('file:pick', async () => {
   if (r.canceled || !r.filePaths[0]) return null;
   return { path: r.filePaths[0], name: path.basename(r.filePaths[0]) };
 });
-ipcMain.handle('file:read', async (_e, p) => { try { return fs.readFileSync(p).toString('base64'); } catch { return null; } });
+ipcMain.handle('file:read', async (_e, p) => { try { return { b64: fs.readFileSync(p).toString('base64'), mtime: fs.statSync(p).mtimeMs }; } catch { return null; } });
+let quietUntil = 0;
+ipcMain.handle('file:write', async (_e, p, b64, expected, force) => {
+  try {
+    const cur = fs.existsSync(p) ? fs.statSync(p).mtimeMs : 0;
+    if (!force && expected && cur && Math.abs(cur - expected) > 1) return { conflict: true };
+    if (cur) {
+      const dir = path.join(app.getPath('userData'), 'backups'); fs.mkdirSync(dir, { recursive: true });
+      const bk = path.join(dir, path.basename(p) + '.bak'); fs.copyFileSync(p, bk);
+    }
+    fs.writeFileSync(p, Buffer.from(b64, 'base64'));
+    quietUntil = Date.now() + 8000;
+    return { ok: true, mtime: fs.statSync(p).mtimeMs };
+  } catch (e) { return { ok: false, error: e.code === 'EBUSY' || e.code === 'EPERM' ? 'The file is open in another program (like Excel). Close it and try again.' : String(e.message || e) }; }
+});
+ipcMain.handle('file:newFile', async (_e, name, b64) => {
+  const r = await dialog.showSaveDialog(win, { title: 'Create workbook', defaultPath: path.join(app.getPath('documents'), name), filters: [{ name: 'Excel', extensions: ['xlsx'] }] });
+  if (r.canceled || !r.filePath) return null;
+  fs.writeFileSync(r.filePath, Buffer.from(b64, 'base64'));
+  return { path: r.filePath, name: path.basename(r.filePath) };
+});
 ipcMain.handle('file:save', async (_e, name, data) => {
   const r = await dialog.showSaveDialog(win, { defaultPath: name });
   if (r.canceled || !r.filePath) return false;
@@ -57,6 +77,7 @@ ipcMain.handle('file:watch', async (_e, p) => {
   watched = p;
   fs.watchFile(p, { interval: 3000 }, (cur, prev) => {
     if (cur.mtimeMs === prev.mtimeMs) return;
+    if (Date.now() < quietUntil) return;
     clearTimeout(timer);
     timer = setTimeout(() => win && win.webContents.send('file:changed'), 1500);
   });

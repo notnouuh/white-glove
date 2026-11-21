@@ -5,6 +5,8 @@ ipcRenderer.on('file:changed', () => cb && cb());
 contextBridge.exposeInMainWorld('wg', {
   pickFile: () => ipcRenderer.invoke('file:pick'),
   readFile: p => ipcRenderer.invoke('file:read', p),
+  writeFile: (p, b, m, f) => ipcRenderer.invoke('file:write', p, b, m, f),
+  newFile: (n, b) => ipcRenderer.invoke('file:newFile', n, b),
   saveFile: (n, d) => ipcRenderer.invoke('file:save', n, d),
   watch: p => ipcRenderer.invoke('file:watch', p),
   onFileChanged: f => { cb = f; },
