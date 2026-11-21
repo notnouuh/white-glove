@@ -171,13 +171,13 @@ const cleanSym = s => String(s || '').toUpperCase().replace(/[^A-Z0-9.\-^=]/g, '
 ipcMain.handle('px:chart', async (_e, sym, range) => {
   try {
     sym = cleanSym(sym); const [r, i] = RMAP[range] || RMAP['1d'];
-    const res = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(sym) + '?range=' + r + '&interval=' + i + '&includePrePost=false', { headers: UA });
+    const res = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(sym) + '?range=' + r + '&interval=' + i + '&includePrePost=' + (range === '1d' || range === '5d' ? 'true' : 'false'), { headers: UA });
     if (!res.ok) return null;
     const j = await res.json(), R = j.chart && j.chart.result && j.chart.result[0]; if (!R) return null;
     const ts = R.timestamp || [], cl = ((R.indicators && R.indicators.quote && R.indicators.quote[0]) || {}).close || [], t = [], c = [];
     ts.forEach((x, k) => { if (cl[k] != null) { t.push(x * 1000); c.push(cl[k]); } });
     const m = R.meta || {};
-    return { t, c, meta: { price: m.regularMarketPrice, prev: m.chartPreviousClose || m.previousClose || 0, type: m.instrumentType, name: m.longName || m.shortName || sym, sym } };
+    return { t, c, meta: { price: m.regularMarketPrice, prev: m.chartPreviousClose || m.previousClose || 0, type: m.instrumentType, name: m.longName || m.shortName || sym, sym, reg: (m.currentTradingPeriod && m.currentTradingPeriod.regular) ? [m.currentTradingPeriod.regular.start * 1000, m.currentTradingPeriod.regular.end * 1000] : null } };
   } catch { return null; }
 });
 let yCrumb = null;
@@ -218,6 +218,7 @@ ipcMain.handle('ai:send', async (_e, body) => {
   } catch (e) { return { ok: false, error: e.message }; }
 });
 
+app.setAppUserModelId('com.whiteglove.app');
 app.whenReady().then(() => {
   create();
   upd = createUpdater({ getUrl: feedUrl, version: app.getVersion(), emit: sendUpd });
