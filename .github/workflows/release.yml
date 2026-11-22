@@ -52,4 +52,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           V="${{ steps.v.outputs.version }}"
-          gh release create "v$V" "release/White-Glove-Setup-$V.exe" release/latest.json --title "White Glove $V" --notes "Automated build of White Glove $V."
+          gh release create "v$V" "release/White-Glove-Setup-$V.exe" release/latest.json --title "White Glove $V Beta" --notes "White Glove $V (Beta). Automated build."
