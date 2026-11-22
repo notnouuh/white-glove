@@ -174,10 +174,10 @@ ipcMain.handle('px:chart', async (_e, sym, range) => {
     const res = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(sym) + '?range=' + r + '&interval=' + i + '&includePrePost=' + (range === '1d' || range === '5d' ? 'true' : 'false'), { headers: UA });
     if (!res.ok) return null;
     const j = await res.json(), R = j.chart && j.chart.result && j.chart.result[0]; if (!R) return null;
-    const ts = R.timestamp || [], cl = ((R.indicators && R.indicators.quote && R.indicators.quote[0]) || {}).close || [], t = [], c = [];
-    ts.forEach((x, k) => { if (cl[k] != null) { t.push(x * 1000); c.push(cl[k]); } });
+    const ts = R.timestamp || [], Q = (R.indicators && R.indicators.quote && R.indicators.quote[0]) || {}, cl = Q.close || [], t = [], c = [], o = [], h = [], l = [], v = [];
+    ts.forEach((x, k) => { if (cl[k] != null) { t.push(x * 1000); c.push(cl[k]); o.push(Q.open && Q.open[k] != null ? Q.open[k] : cl[k]); h.push(Q.high && Q.high[k] != null ? Q.high[k] : cl[k]); l.push(Q.low && Q.low[k] != null ? Q.low[k] : cl[k]); v.push((Q.volume && Q.volume[k]) || 0); } });
     const m = R.meta || {};
-    return { t, c, meta: { price: m.regularMarketPrice, prev: m.chartPreviousClose || m.previousClose || 0, type: m.instrumentType, name: m.longName || m.shortName || sym, sym, reg: (m.currentTradingPeriod && m.currentTradingPeriod.regular) ? [m.currentTradingPeriod.regular.start * 1000, m.currentTradingPeriod.regular.end * 1000] : null } };
+    return { t, c, o, h, l, v, meta: { exch: m.fullExchangeName || m.exchangeName, cur: m.currency, dh: m.regularMarketDayHigh, dl: m.regularMarketDayLow, vol: m.regularMarketVolume, price: m.regularMarketPrice, prev: m.chartPreviousClose || m.previousClose || 0, type: m.instrumentType, name: m.longName || m.shortName || sym, sym, reg: (m.currentTradingPeriod && m.currentTradingPeriod.regular) ? [m.currentTradingPeriod.regular.start * 1000, m.currentTradingPeriod.regular.end * 1000] : null } };
   } catch { return null; }
 });
 let yCrumb = null;
@@ -189,6 +189,15 @@ async function yAuth() {
   const crumb = await c.text(); if (!c.ok || !crumb || crumb.length > 40) throw new Error('crumb');
   yCrumb = { ck, crumb, exp: Date.now() + 3600e3 }; return yCrumb;
 }
+ipcMain.handle('px:info', async (_e, sym) => {
+  try {
+    sym = cleanSym(sym); const a = await yAuth();
+    const res = await fetch('https://query1.finance.yahoo.com/v7/finance/quote?symbols=' + encodeURIComponent(sym) + '&crumb=' + encodeURIComponent(a.crumb), { headers: Object.assign({ cookie: a.ck }, UA) });
+    if (!res.ok) return null;
+    const j = await res.json(), q = j.quoteResponse && j.quoteResponse.result && j.quoteResponse.result[0]; if (!q) return null;
+    return { cap: q.marketCap, open: q.regularMarketOpen, dh: q.regularMarketDayHigh, dl: q.regularMarketDayLow, vol: q.regularMarketVolume, exch: q.fullExchangeName, cur: q.currency, name: q.longName || q.shortName, hi52: q.fiftyTwoWeekHigh, lo52: q.fiftyTwoWeekLow, prev: q.regularMarketPreviousClose };
+  } catch { return null; }
+});
 ipcMain.handle('px:fund', async (_e, sym) => {
   try {
     const a = await yAuth();
