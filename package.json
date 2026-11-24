@@ -1,6 +1,6 @@
 {
   "name": "white-glove",
-  "version": "2.83.0",
+  "version": "2.84.0",
   "description": "Your life dashboard",
   "main": "main.js",
   "scripts": {
