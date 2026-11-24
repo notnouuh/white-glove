@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, safeStorage, shell, screen } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, safeStorage, shell, screen, session } = require('electron');
 const path = require('path'), fs = require('fs'), http = require('http'), crypto = require('crypto');
 const { create: createUpdater } = require('./updater');
 const DEFAULT_FEED = 'https://github.com/notnouuh/white-glove/releases/latest/download';
@@ -27,6 +27,26 @@ function saveState() {
     fs.writeFileSync(stateFile(), JSON.stringify({ bounds: win.getNormalBounds(), max: win.isMaximized() }));
   } catch {}
 }
+// ---- Google Sheets embedded view (a real Google Sheets page inside the app) ----
+const GP = 'persist:gsheets', GOOD = /(^|\.)(google\.com|gstatic\.com|googleusercontent\.com|googleapis.com|youtube\.com|gvt1\.com)$/i;
+function setupSheetsView() {
+  const ss = session.fromPartition(GP);
+  ss.setUserAgent(`Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${process.versions.chrome} Safari/537.36`);
+  ss.setPermissionRequestHandler((_wc, perm, cb) => cb(perm === 'clipboard-sanitized-write' || perm === 'clipboard-read'));
+  app.on('web-contents-created', (_e, wc) => {
+    if (wc.getType() !== 'webview') return;
+    const ok = u => { try { const x = new URL(u); return x.protocol === 'https:' && GOOD.test(x.hostname); } catch { return false; } };
+    wc.setWindowOpenHandler(({ url }) => { if (/^https:/.test(url)) shell.openExternal(url); return { action: 'deny' }; });
+    wc.on('will-navigate', (e, u) => { if (!ok(u)) { e.preventDefault(); if (/^https:/.test(u)) shell.openExternal(u); } });
+  });
+}
+app.on('web-contents-created', (_e, wc) => {
+  wc.on('will-attach-webview', (e, prefs, params) => {
+    delete prefs.preload; delete prefs.preloadURL;
+    prefs.nodeIntegration = false; prefs.contextIsolation = true; prefs.sandbox = true;
+    if (params.partition !== GP || (params.src && !/^https:\/\/docs\.google\.com\//.test(params.src) && !(process.env.WG_WVTEST && params.src.startsWith(process.env.WG_WVTEST)))) e.preventDefault();
+  });
+});
 function create() {
   const st = process.env.WG_SHOT ? null : loadState();
   win = new BrowserWindow({
@@ -34,7 +54,7 @@ function create() {
     backgroundColor: '#FAFAFA', icon: path.join(__dirname, 'build', 'icon.png'), title: 'White Glove', autoHideMenuBar: true,
     titleBarStyle: 'hidden',
     titleBarOverlay: { color: '#FAFAFA', symbolColor: '#3D3D3A', height: 40 },
-    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: false }
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: false, webviewTag: true }
   });
   win.setMenuBarVisibility(false);
   if (st && st.max) win.maximize();
@@ -122,7 +142,7 @@ ipcMain.handle('g:config', async (_e, cid, sec) => {
   if (cid !== g.cid) { delete g.rt; delete g.email; gTok = { t: '', exp: 0 }; }
   g.cid = cid; if (sec) g.sec = sec; return gPut(g);
 });
-ipcMain.handle('g:signout', async () => { const g = gGet(); delete g.rt; delete g.email; gTok = { t: '', exp: 0 }; gPut(g); return true; });
+ipcMain.handle('g:signout', async () => { try { await session.fromPartition(GP).clearStorageData(); } catch {} const g = gGet(); delete g.rt; delete g.email; gTok = { t: '', exp: 0 }; gPut(g); return true; });
 ipcMain.handle('g:signin', async () => {
   const g = gGet(); if (!g.cid) return { ok: false, error: 'Save your Client ID first.' };
   try {
@@ -248,6 +268,7 @@ ipcMain.handle('ai:send', async (_e, body) => {
 
 app.setAppUserModelId('com.whiteglove.app');
 app.whenReady().then(() => {
+  setupSheetsView();
   create();
   upd = createUpdater({ getUrl: feedUrl, version: app.getVersion(), emit: sendUpd });
   if (app.isPackaged) { setTimeout(() => upd.check(), 8000); setInterval(() => upd.check(), 6 * 3600 * 1000); }

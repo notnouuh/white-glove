@@ -12,6 +12,7 @@
   const RMAP = { '1d': ['1d', '5m'], '5d': ['5d', '30m'], '1mo': ['1mo', '1d'], '6mo': ['6mo', '1d'], '1y': ['1y', '1d'] };
   const noop = () => {};
   window.wg = {
+    isWeb: true,
     pickFile: async () => null, readFile: async () => null, writeFile: async () => ({ ok: false }), newFile: async () => null, watch: async () => {}, onFileChanged: noop,
     saveFile: async (name, data) => {
       const b = new Blob([data], { type: 'application/json' }), a = document.createElement('a');
