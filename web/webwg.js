@@ -21,7 +21,7 @@
     hasKey: async () => false, setKey: async () => false,
     ai: async () => ({ ok: false, error: 'Claude chat lives in the desktop app for now.' }),
     updGet: async () => ({ version: '', url: '', ready: false }), updSet: async () => {}, updCheck: async () => {}, updInstall: async () => {}, onUpdate: noop,
-    sumFetch: async u => { try { if (!/^https:\/\/docs\.google\.com\/spreadsheets\//.test(u)) return { ok: false, error: 'That isn\u2019t a Google Sheets link.' }; let r; try { r = await fetch(u, { cache: 'no-store' }); } catch (e) { r = await fetch('https://corsproxy.io/?url=' + encodeURIComponent(u), { cache: 'no-store' }); } if (!r.ok) return { ok: false, error: 'Google returned ' + r.status + '.' }; return { ok: true, text: await r.text() }; } catch (e) { return { ok: false, error: 'Couldn\u2019t reach Google.' }; } },
+    gStatus: async () => ({ cfg: false, signed: false, web: true }), gConfig: async () => false, gSignin: async () => ({ ok: false, error: 'Desktop only.' }), gSignout: async () => true, sumFetch: async () => ({ ok: false, error: 'The Google summary is available in the desktop app.' }),
     pxGet: async list => {
       const out = {}, syms = [...new Set((list || []).map(clean).filter(Boolean))].slice(0, 60);
       await Promise.all(syms.map(async t => {
