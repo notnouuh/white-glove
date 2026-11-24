@@ -158,7 +158,7 @@ ipcMain.handle('sum:fetch', async (_e, id, ranges) => {
   try {
     id = String(id || '');
     const RX = /^(?:'[^'!]{1,100}'|[^'!]{1,100})!\$?[A-Za-z]{1,3}\$?\d{1,5}(?::\$?[A-Za-z]{1,3}\$?\d{1,5})?$/;
-    if (!/^[A-Za-z0-9_-]{20,80}$/.test(id) || !Array.isArray(ranges) || !ranges.length || ranges.length > 30 || !ranges.every(r => typeof r === 'string' && RX.test(r))) return { ok: false, error: 'Check the sheet link and the cells (like Summary!B3).' };
+    if (!/^[A-Za-z0-9_-]{20,80}$/.test(id) || !Array.isArray(ranges) || !ranges.length || ranges.length > 30 || !ranges.every(r => typeof r === 'string' && (RX.test(r) || (/^[A-Za-z_][A-Za-z0-9_.]{0,100}$/.test(r) && !/^[A-Za-z]{1,3}\d{1,5}$/.test(r))))) return { ok: false, error: 'Check the sheet link and the cells (like Summary!B3) or named ranges.' };
     const u = 'https://sheets.googleapis.com/v4/spreadsheets/' + id + '/values:batchGet?valueRenderOption=FORMATTED_VALUE&majorDimension=ROWS&' + ranges.map(r => 'ranges=' + encodeURIComponent(r)).join('&');
     for (let a = 0; a < 2; a++) {
       const t = await gAccess();
