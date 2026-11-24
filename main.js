@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, safeStorage, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, safeStorage, shell, screen } = require('electron');
 const path = require('path'), fs = require('fs'), http = require('http'), crypto = require('crypto');
 const { create: createUpdater } = require('./updater');
 const DEFAULT_FEED = 'https://github.com/notnouuh/white-glove/releases/latest/download';
@@ -11,15 +11,34 @@ if (!app.requestSingleInstanceLock()) app.quit();
 let win, watched = null, timer = null;
 const keyFile = () => path.join(app.getPath('userData'), 'anthropic.key');
 
+const stateFile = () => path.join(app.getPath('userData'), 'window.json');
+function loadState() {
+  try {
+    const s = JSON.parse(fs.readFileSync(stateFile(), 'utf8')), b = s.bounds;
+    if (!b || !(b.width > 0) || !(b.height > 0)) return null;
+    // Only restore if the saved spot is still on a connected display (e.g. monitor 2 unplugged -> fall back to default).
+    const ok = screen.getAllDisplays().some(d => { const a = d.workArea, x = Math.max(a.x, b.x), y = Math.max(a.y, b.y), w = Math.min(a.x + a.width, b.x + b.width) - x, h = Math.min(a.y + a.height, b.y + b.height) - y; return w >= 200 && h >= 120; });
+    return ok ? s : null;
+  } catch { return null; }
+}
+function saveState() {
+  try {
+    if (!win || win.isDestroyed() || win.isMinimized() || win.isFullScreen()) return;
+    fs.writeFileSync(stateFile(), JSON.stringify({ bounds: win.getNormalBounds(), max: win.isMaximized() }));
+  } catch {}
+}
 function create() {
+  const st = process.env.WG_SHOT ? null : loadState();
   win = new BrowserWindow({
-    width: 1240, height: 820, minWidth: 900, minHeight: 600,
+    width: 1240, height: 820, minWidth: 900, minHeight: 600, ...(st ? st.bounds : {}),
     backgroundColor: '#FAFAFA', icon: path.join(__dirname, 'build', 'icon.png'), title: 'White Glove', autoHideMenuBar: true,
     titleBarStyle: 'hidden',
     titleBarOverlay: { color: '#FAFAFA', symbolColor: '#3D3D3A', height: 40 },
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: false }
   });
   win.setMenuBarVisibility(false);
+  if (st && st.max) win.maximize();
+  if (!process.env.WG_SHOT) { let t = null; const sv = () => { clearTimeout(t); t = setTimeout(saveState, 400); }; ['move', 'resize', 'maximize', 'unmaximize'].forEach(ev => win.on(ev, sv)); win.on('close', saveState); }
   win.loadFile(path.join(__dirname, 'app', 'index.html'), process.env.WG_SHOT ? { query: { nosplash: '1' } } : undefined);
   win.webContents.setWindowOpenHandler(({ url }) => { if (/^https:/.test(url)) shell.openExternal(url); return { action: 'deny' }; });
   win.webContents.on('will-navigate', e => e.preventDefault());
