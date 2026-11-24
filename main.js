@@ -27,26 +27,6 @@ function saveState() {
     fs.writeFileSync(stateFile(), JSON.stringify({ bounds: win.getNormalBounds(), max: win.isMaximized() }));
   } catch {}
 }
-// ---- Google Sheets embedded view (a real Google Sheets page inside the app) ----
-const GP = 'persist:gsheets', GOOD = /(^|\.)(google\.com|gstatic\.com|googleusercontent\.com|googleapis.com|youtube\.com|gvt1\.com)$/i;
-function setupSheetsView() {
-  const ss = session.fromPartition(GP);
-  ss.setUserAgent(`Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${process.versions.chrome} Safari/537.36`);
-  ss.setPermissionRequestHandler((_wc, perm, cb) => cb(perm === 'clipboard-sanitized-write' || perm === 'clipboard-read'));
-  app.on('web-contents-created', (_e, wc) => {
-    if (wc.getType() !== 'webview') return;
-    const ok = u => { try { const x = new URL(u); return x.protocol === 'https:' && GOOD.test(x.hostname); } catch { return false; } };
-    wc.setWindowOpenHandler(({ url }) => { if (/^https:/.test(url)) shell.openExternal(url); return { action: 'deny' }; });
-    wc.on('will-navigate', (e, u) => { if (!ok(u)) { e.preventDefault(); if (/^https:/.test(u)) shell.openExternal(u); } });
-  });
-}
-app.on('web-contents-created', (_e, wc) => {
-  wc.on('will-attach-webview', (e, prefs, params) => {
-    delete prefs.preload; delete prefs.preloadURL;
-    prefs.nodeIntegration = false; prefs.contextIsolation = true; prefs.sandbox = true;
-    if (params.partition !== GP || (params.src && !/^https:\/\/docs\.google\.com\//.test(params.src) && !(process.env.WG_WVTEST && params.src.startsWith(process.env.WG_WVTEST)))) e.preventDefault();
-  });
-});
 function create() {
   const st = process.env.WG_SHOT ? null : loadState();
   win = new BrowserWindow({
@@ -54,7 +34,7 @@ function create() {
     backgroundColor: '#FAFAFA', icon: path.join(__dirname, 'build', 'icon.png'), title: 'White Glove', autoHideMenuBar: true,
     titleBarStyle: 'hidden',
     titleBarOverlay: { color: '#FAFAFA', symbolColor: '#3D3D3A', height: 40 },
-    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: false, webviewTag: true }
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: false }
   });
   win.setMenuBarVisibility(false);
   if (st && st.max) win.maximize();
@@ -122,70 +102,22 @@ ipcMain.handle('file:watch', async (_e, p) => {
   });
 });
 
-/* ---- Google OAuth (loopback + PKCE) ---- */
-const gFile = () => path.join(app.getPath('userData'), 'google.bin');
-const gGet = () => { try { return JSON.parse(safeStorage.decryptString(fs.readFileSync(gFile()))); } catch { return {}; } };
-const gPut = o => { if (!safeStorage.isEncryptionAvailable()) return false; fs.writeFileSync(gFile(), safeStorage.encryptString(JSON.stringify(o))); return true; };
-let gTok = { t: '', exp: 0 };
-const gForm = o => ({ method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(o) });
-async function gAccess() {
-  if (gTok.t && Date.now() < gTok.exp - 60000) return gTok.t;
-  const g = gGet(); if (!g.rt) throw new Error('Not signed in to Google.');
-  const r = await fetch('https://oauth2.googleapis.com/token', gForm({ client_id: g.cid, client_secret: g.sec || '', refresh_token: g.rt, grant_type: 'refresh_token' }));
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok) { if (j.error === 'invalid_grant') { delete g.rt; gPut(g); } throw new Error(j.error_description || j.error || 'Google sign-in failed'); }
-  gTok = { t: j.access_token, exp: Date.now() + j.expires_in * 1000 }; return gTok.t;
+/* ---- Google Sheet summary: read a published CSV (no account, no key) ---- */
+ipcMain.handle('sum:fetch', async (_e, u) => {
+  try {
+    if (typeof u !== 'string' || !/^https:\/\/docs\.google\.com\/spreadsheets\//.test(u)) return { ok: false, error: 'That isn\u2019t a Google Sheets link.' };
+    const r = await fetch(u, { redirect: 'follow', headers: { 'cache-control': 'no-cache' } });
+    if (!/^https:\/\/(docs\.google\.com|[a-z0-9-]+\.googleusercontent\.com)\//.test(r.url)) return { ok: false, error: 'Unexpected redirect.' };
+    if (!r.ok) return { ok: false, error: r.status === 404 ? 'Link not found. Is the tab still published?' : 'Google returned ' + r.status + '.' };
+    const t = await r.text();
+    return { ok: true, text: t.slice(0, 2000000) };
+  } catch (e) { return { ok: false, error: 'Couldn\u2019t reach Google. Check your connection.' }; }
+});
+// one-time cleanup of the old Google sign-in (key, secret and token) and its browser session
+function wipeGoogle() {
+  try { fs.rmSync(path.join(app.getPath('userData'), 'google.bin'), { force: true }); } catch {}
+  try { session.fromPartition('persist:gsheets').clearStorageData(); } catch {}
 }
-ipcMain.handle('g:status', async () => { const g = gGet(); return { cfg: !!g.cid, signed: !!g.rt, email: g.email || '', cid: g.cid || '' }; });
-ipcMain.handle('g:config', async (_e, cid, sec) => {
-  const g = gGet(); cid = String(cid || '').trim(); sec = String(sec || '').trim();
-  if (cid !== g.cid) { delete g.rt; delete g.email; gTok = { t: '', exp: 0 }; }
-  g.cid = cid; if (sec) g.sec = sec; return gPut(g);
-});
-ipcMain.handle('g:signout', async () => { try { await session.fromPartition(GP).clearStorageData(); } catch {} const g = gGet(); delete g.rt; delete g.email; gTok = { t: '', exp: 0 }; gPut(g); return true; });
-ipcMain.handle('g:signin', async () => {
-  const g = gGet(); if (!g.cid) return { ok: false, error: 'Save your Client ID first.' };
-  try {
-    const ver = crypto.randomBytes(32).toString('base64url'), ch = crypto.createHash('sha256').update(ver).digest('base64url'), state = crypto.randomBytes(8).toString('hex');
-    let redir = '', to;
-    const code = await new Promise((resolve, reject) => {
-      const srv = http.createServer((q, s) => {
-        const u = new URL(q.url, 'http://127.0.0.1');
-        if (u.pathname !== '/') { s.writeHead(404); s.end(); return; }
-        const c = u.searchParams.get('code'), er = u.searchParams.get('error');
-        s.writeHead(200, { 'content-type': 'text/html' });
-        s.end('<body style="font:16px sans-serif;text-align:center;margin-top:20vh">' + (c ? 'White Glove is connected. You can close this tab.' : 'Sign-in cancelled. You can close this tab.') + '</body>');
-        clearTimeout(to); srv.close();
-        if (u.searchParams.get('state') !== state) return reject(new Error('Sign-in was interrupted.'));
-        c ? resolve(c) : reject(new Error(er || 'Sign-in cancelled.'));
-      });
-      srv.listen(0, '127.0.0.1', () => {
-        redir = 'http://127.0.0.1:' + srv.address().port;
-        const url = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({ client_id: g.cid, redirect_uri: redir, response_type: 'code', scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.metadata.readonly', code_challenge: ch, code_challenge_method: 'S256', access_type: 'offline', prompt: 'consent', state });
-        shell.openExternal(url);
-      });
-      to = setTimeout(() => { srv.close(); reject(new Error('Sign-in timed out.')); }, 180000);
-    });
-    const r = await fetch('https://oauth2.googleapis.com/token', gForm({ code, client_id: g.cid, client_secret: g.sec || '', code_verifier: ver, redirect_uri: redir, grant_type: 'authorization_code' }));
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok || !j.refresh_token) return { ok: false, error: j.error_description || j.error || 'Google didn’t return a sign-in. Try again.' };
-    g.rt = j.refresh_token; gTok = { t: j.access_token, exp: Date.now() + j.expires_in * 1000 };
-    try { const a = await fetch('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)', { headers: { authorization: 'Bearer ' + j.access_token } }); g.email = ((await a.json()).user || {}).emailAddress || ''; } catch {}
-    return gPut(g) ? { ok: true } : { ok: false, error: 'Couldn’t store the sign-in securely on this computer.' };
-  } catch (e) { return { ok: false, error: String(e.message || e) }; }
-});
-ipcMain.handle('g:api', async (_e, m, u, b) => {
-  try {
-    if (!['GET', 'POST'].includes(m) || !/^https:\/\/(sheets\.googleapis\.com\/v4\/spreadsheets\/|www\.googleapis\.com\/drive\/v3\/(files|about))/.test(String(u))) return { ok: false, error: 'Blocked request.' };
-    for (let a = 0; a < 2; a++) {
-      const t = await gAccess();
-      const r = await fetch(u, { method: m, headers: Object.assign({ authorization: 'Bearer ' + t }, b ? { 'content-type': 'application/json' } : {}), body: b ? JSON.stringify(b) : undefined });
-      if (r.status === 401 && a === 0) { gTok = { t: '', exp: 0 }; continue; }
-      const j = await r.json().catch(() => ({}));
-      return r.ok ? { ok: true, data: j } : { ok: false, status: r.status, error: (j.error && j.error.message) || ('Google error ' + r.status) };
-    }
-  } catch (e) { return { ok: false, error: String(e.message || e) }; }
-});
 
 /* ---- live market prices (public data, no account) ---- */
 ipcMain.handle('px:get', async (_e, list) => {
@@ -268,7 +200,7 @@ ipcMain.handle('ai:send', async (_e, body) => {
 
 app.setAppUserModelId('com.whiteglove.app');
 app.whenReady().then(() => {
-  setupSheetsView();
+  wipeGoogle();
   create();
   upd = createUpdater({ getUrl: feedUrl, version: app.getVersion(), emit: sendUpd });
   if (app.isPackaged) { setTimeout(() => upd.check(), 8000); setInterval(() => upd.check(), 6 * 3600 * 1000); }
