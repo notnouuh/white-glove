@@ -153,19 +153,20 @@ ipcMain.handle('g:signin', async () => {
     return gPut(g) ? { ok: true } : { ok: false, error: 'Couldn’t store the sign-in securely on this computer.' };
   } catch (e) { return { ok: false, error: String(e.message || e) }; }
 });
-// Read-only: fetch the values of ONE tab of ONE spreadsheet. Nothing else is reachable.
-ipcMain.handle('sum:fetch', async (_e, id, tab) => {
+// Read-only: fetch ONLY the listed cells/ranges of ONE spreadsheet (no whole tabs). Nothing else is reachable.
+ipcMain.handle('sum:fetch', async (_e, id, ranges) => {
   try {
-    id = String(id || ''); tab = String(tab || '');
-    if (!/^[A-Za-z0-9_-]{20,80}$/.test(id) || !tab || tab.length > 100) return { ok: false, error: 'Check the sheet link and tab name.' };
-    const u = 'https://sheets.googleapis.com/v4/spreadsheets/' + id + '/values/' + encodeURIComponent("'" + tab.replace(/'/g, "''") + "'") + '?valueRenderOption=FORMATTED_VALUE&majorDimension=ROWS';
+    id = String(id || '');
+    const RX = /^(?:'[^'!]{1,100}'|[^'!]{1,100})!\$?[A-Za-z]{1,3}\$?\d{1,5}(?::\$?[A-Za-z]{1,3}\$?\d{1,5})?$/;
+    if (!/^[A-Za-z0-9_-]{20,80}$/.test(id) || !Array.isArray(ranges) || !ranges.length || ranges.length > 30 || !ranges.every(r => typeof r === 'string' && RX.test(r))) return { ok: false, error: 'Check the sheet link and the cells (like Summary!B3).' };
+    const u = 'https://sheets.googleapis.com/v4/spreadsheets/' + id + '/values:batchGet?valueRenderOption=FORMATTED_VALUE&majorDimension=ROWS&' + ranges.map(r => 'ranges=' + encodeURIComponent(r)).join('&');
     for (let a = 0; a < 2; a++) {
       const t = await gAccess();
       const r = await fetch(u, { headers: { authorization: 'Bearer ' + t } });
       if (r.status === 401 && a === 0) { gTok = { t: '', exp: 0 }; continue; }
       const j = await r.json().catch(() => ({}));
-      if (!r.ok) return { ok: false, error: r.status === 404 ? 'Sheet not found. Check the link.' : r.status === 400 ? 'Couldn\u2019t find a tab named \u201C' + tab + '\u201D.' : r.status === 403 ? 'This Google account can\u2019t open that sheet (or the Sheets API is off for your project).' : (j.error && j.error.message) || ('Google error ' + r.status) };
-      return { ok: true, rows: (j.values || []).slice(0, 500).map(x => x.slice(0, 60).map(String)) };
+      if (!r.ok) return { ok: false, error: r.status === 404 ? 'Sheet not found. Check the link.' : r.status === 400 ? 'Couldn\u2019t read those cells. Check the tab name and cell addresses.' : r.status === 403 ? 'This Google account can\u2019t open that sheet (or the Sheets API is off for your project).' : (j.error && j.error.message) || ('Google error ' + r.status) };
+      return { ok: true, vr: (j.valueRanges || []).slice(0, 30).map(x => ({ range: String(x.range || ''), values: (x.values || []).slice(0, 200).map(row => row.slice(0, 40).map(String)) })) };
     }
   } catch (e) { return { ok: false, error: String(e.message || e) }; }
 });

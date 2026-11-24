@@ -21,7 +21,7 @@ contextBridge.exposeInMainWorld('wg', {
   gConfig: (c, s) => ipcRenderer.invoke('g:config', c, s),
   gSignin: () => ipcRenderer.invoke('g:signin'),
   gSignout: () => ipcRenderer.invoke('g:signout'),
-  sumFetch: (id, tab) => ipcRenderer.invoke('sum:fetch', id, tab),
+  sumFetch: (id, ranges) => ipcRenderer.invoke('sum:fetch', id, ranges),
   pxGet: l => ipcRenderer.invoke('px:get', l),
   pxChart: (s, r) => ipcRenderer.invoke('px:chart', s, r),
   pxInfo: s => ipcRenderer.invoke('px:info', s),
