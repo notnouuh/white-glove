@@ -613,7 +613,7 @@ case 'txcsv':$('#txf').click();break;case 'import':$('#bkf').click();break;
  
  case 'px':refreshPx(false);break;
  case 'gsignin':toast('Opening your browser\u2026');wg.gSignin().then(async r=>{await gRefresh();toast(r.ok?'Google connected':(r.error||'Sign-in failed'));render()});break;
- case 'gsignout':wg.gSignout().then(async()=>{await gRefresh();render()});break;
+ case 'gsignout':wg.gSignout().then(async()=>{if(S.gs){dropSheet();S.gs=null;G.gs=false;G.pend.clear();G.wb=null;G.dirty=false;G.sheet=null;G.msg='';save()}await gRefresh();if(tab=='sheets')go('sheets');else render();toast('Signed out \u2014 Google Sheet unlinked')});break;
  case 'glist':gsList();break;
  case 'restart':wg.updInstall();break;case 'upd':if(UV.ready){wg.updInstall()}else{UCHK=true;toast('Checking for updates\u2026');wg.updCheck()}break}}
 document.addEventListener('dblclick',e=>{const td=e.target.closest('#grid td[data-r]');if(td&&!td.classList.contains('ed'))startEdit(+td.dataset.r,+td.dataset.c)});
