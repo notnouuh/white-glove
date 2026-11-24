@@ -189,7 +189,7 @@ ipcMain.handle('px:get', async (_e, list) => {
 
 /* ---- live charts (public data) ---- */
 const UA = { 'user-agent': 'Mozilla/5.0' };
-const RMAP = { '1d': ['1d', '5m'], '5d': ['5d', '30m'], '1mo': ['1mo', '1d'], '6mo': ['6mo', '1d'], '1y': ['1y', '1d'] };
+const RMAP = { '1d': ['1d', '5m'], '5d': ['5d', '30m'], '1mo': ['1mo', '1d'], '6mo': ['6mo', '1d'], '1y': ['1y', '1d'], '5dd': ['5d', '1d'] };
 const cleanSym = s => String(s || '').toUpperCase().replace(/[^A-Z0-9.\-^=]/g, '');
 ipcMain.handle('px:chart', async (_e, sym, range) => {
   try {
@@ -200,7 +200,7 @@ ipcMain.handle('px:chart', async (_e, sym, range) => {
     const ts = R.timestamp || [], Q = (R.indicators && R.indicators.quote && R.indicators.quote[0]) || {}, cl = Q.close || [], t = [], c = [], o = [], h = [], l = [], v = [];
     ts.forEach((x, k) => { if (cl[k] != null) { t.push(x * 1000); c.push(cl[k]); o.push(Q.open && Q.open[k] != null ? Q.open[k] : cl[k]); h.push(Q.high && Q.high[k] != null ? Q.high[k] : cl[k]); l.push(Q.low && Q.low[k] != null ? Q.low[k] : cl[k]); v.push((Q.volume && Q.volume[k]) || 0); } });
     const m = R.meta || {};
-    return { t, c, o, h, l, v, meta: { exch: m.fullExchangeName || m.exchangeName, cur: m.currency, dh: m.regularMarketDayHigh, dl: m.regularMarketDayLow, vol: m.regularMarketVolume, price: m.regularMarketPrice, prev: m.chartPreviousClose || m.previousClose || 0, type: m.instrumentType, name: m.longName || m.shortName || sym, sym, reg: (m.currentTradingPeriod && m.currentTradingPeriod.regular) ? [m.currentTradingPeriod.regular.start * 1000, m.currentTradingPeriod.regular.end * 1000] : null } };
+    return { t, c, o, h, l, v, meta: { exch: m.fullExchangeName || m.exchangeName, cur: m.currency, dh: m.regularMarketDayHigh, dl: m.regularMarketDayLow, vol: m.regularMarketVolume, price: m.regularMarketPrice, rt: (m.regularMarketTime || 0) * 1000, prev: m.chartPreviousClose || m.previousClose || 0, type: m.instrumentType, name: m.longName || m.shortName || sym, sym, reg: (m.currentTradingPeriod && m.currentTradingPeriod.regular) ? [m.currentTradingPeriod.regular.start * 1000, m.currentTradingPeriod.regular.end * 1000] : null } };
   } catch { return null; }
 });
 let yCrumb = null;

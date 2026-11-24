@@ -9,7 +9,7 @@
     const u = P ? P + '/yf' + path : 'https://corsproxy.io/?url=' + encodeURIComponent(YF + path);
     const r = await fetch(u); if (!r.ok) throw new Error('px ' + r.status); return r.json();
   };
-  const RMAP = { '1d': ['1d', '5m'], '5d': ['5d', '30m'], '1mo': ['1mo', '1d'], '6mo': ['6mo', '1d'], '1y': ['1y', '1d'] };
+  const RMAP = { '1d': ['1d', '5m'], '5d': ['5d', '30m'], '1mo': ['1mo', '1d'], '6mo': ['6mo', '1d'], '1y': ['1y', '1d'], '5dd': ['5d', '1d'] };
   const noop = () => {};
   window.wg = {
     isWeb: true,
