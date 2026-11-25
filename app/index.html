@@ -212,8 +212,8 @@ const DEF={
  todo:{t:'Checklist',w:'l',body:()=>{const T=S.todo||[];return `<div class="tdl">${T.map(x=>`<div class="tdr${x.done?' dn':''}"><button class="tdc" data-tdt="${x.id}" title="${x.done?'Mark not done':'Mark done'}">${x.done?ic('check',12):''}</button><span class="tdt">${esc(x.t)}</span><span class="tdx" data-tdx="${x.id}" title="Delete">${ic('close',12)}</span></div>`).join('')}</div><form data-f="todo" class="tdf"><span class="tdc" style="opacity:.45"></span><input name="t" placeholder="New item" autocomplete="off"></form>`}},
  note:{t:'Notes',w:'l',body:()=>`<textarea class="nt" data-note placeholder="Jot anything\u2026">${esc(S.note||'')}</textarea>`}
 };
-const ORDER=Object.keys(DEF),ON=['bal','port','save','nw','nwc','split','hit','todo'];
-function lay(){if(S.layout&&!S.nwcOn){S.nwcOn=1;const q=S.layout.find(x=>x.id=='nwc');if(q)q.on=true}if(!S.layout)S.layout=ORDER.map(i=>({id:i,w:DEF[i].w,on:ON.includes(i)}));ORDER.forEach(i=>{if(!S.layout.find(x=>x.id==i))S.layout.push({id:i,w:DEF[i].w,on:i=='split'||i=='hit'||i=='todo'||i=='nwc'})});S.layout=S.layout.filter(x=>DEF[x.id]);return S.layout}
+const ORDER=Object.keys(DEF),ON=['bal','port','save','nw','split','hit','todo'];
+function lay(){if(S.layout&&!S.nwcOff){S.nwcOff=1;S.nwcOn=1;const q=S.layout.find(x=>x.id=='nwc');if(q)q.on=false}if(!S.layout)S.layout=ORDER.map(i=>({id:i,w:DEF[i].w,on:ON.includes(i)}));ORDER.forEach(i=>{if(!S.layout.find(x=>x.id==i))S.layout.push({id:i,w:DEF[i].w,on:i=='split'||i=='hit'||i=='todo'||i=='nwc'})});S.layout=S.layout.filter(x=>DEF[x.id]);return S.layout}
 let rng='week',ed=false;
 const defRange=(d,x)=>{if(!d.rng)return null;if(x.rng&&d.rng.includes(x.rng))return x.rng;return d.rng.includes(rng)?rng:d.rng[0]};
 function W(x){const d=DEF[x.id],r=defRange(d,x),so=d.sort?(x.sort&&d.sort.some(s=>s[0]==x.sort)?x.sort:d.sort[0][0]):null;
