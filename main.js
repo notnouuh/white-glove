@@ -259,6 +259,7 @@ ipcMain.handle('ai:send', async (_e, body) => {
 });
 
 app.setAppUserModelId('com.whiteglove.app');
+app.commandLine.appendSwitch('autoplay-policy','no-user-gesture-required');
 app.whenReady().then(() => {
   try { session.fromPartition('persist:gsheets').clearStorageData(); } catch {}
   create();
