@@ -33,11 +33,20 @@ jobs:
         run: npx electron-builder --dir --win --x64
       - name: Install NSIS
         if: steps.ex.outputs.exists == 'false'
-        run: choco install nsis -y --no-progress
+        run: |
+          $exe = 'C:\Program Files (x86)\NSIS\makensis.exe'
+          if (-not (Test-Path $exe)) { choco install nsis -y --no-progress }
+          if (-not (Test-Path $exe)) {
+            Write-Host 'choco failed, falling back to the NSIS zip'
+            Invoke-WebRequest -Uri 'https://downloads.sourceforge.net/project/nsis/NSIS%203/3.10/nsis-3.10.zip' -OutFile "$env:RUNNER_TEMP\nsis.zip" -MaximumRetryCount 5 -RetryIntervalSec 5
+            Expand-Archive "$env:RUNNER_TEMP\nsis.zip" -DestinationPath 'C:\nsis-zip' -Force
+            $exe = (Get-ChildItem 'C:\nsis-zip' -Recurse -Filter makensis.exe | Select-Object -First 1).FullName
+          }
+          "NSIS_EXE=$exe" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
       - name: Build installer
         if: steps.ex.outputs.exists == 'false'
         working-directory: installer
-        run: '& "C:\Program Files (x86)\NSIS\makensis.exe" /DVERSION=${{ steps.v.outputs.version }} installer.nsi'
+        run: '& $env:NSIS_EXE /DVERSION=${{ steps.v.outputs.version }} installer.nsi'
       - name: Write latest.json
         if: steps.ex.outputs.exists == 'false'
         shell: bash
