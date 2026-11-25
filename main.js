@@ -194,9 +194,17 @@ const cleanSym = s => String(s || '').toUpperCase().replace(/[^A-Z0-9.\-^=]/g, '
 ipcMain.handle('px:chart', async (_e, sym, range) => {
   try {
     sym = cleanSym(sym); const [r, i] = RMAP[range] || RMAP['1d'];
-    const res = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(sym) + '?range=' + r + '&interval=' + i + '&includePrePost=' + (range === '1d' || range === '5d' ? 'true' : 'false'), { headers: UA });
-    if (!res.ok) return null;
-    const j = await res.json(), R = j.chart && j.chart.result && j.chart.result[0]; if (!R) return null;
+    const pp = range === '1d' || range === '5d', tries = [['query1', pp], ['query2', pp], ['query1', false], ['query2', false]];
+    let R = null;
+    for (const [h, p] of tries) {
+      try {
+        const res = await fetch('https://' + h + '.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(sym) + '?range=' + r + '&interval=' + i + '&includePrePost=' + p, { headers: UA });
+        if (!res.ok) continue;
+        const j = await res.json(), x = j.chart && j.chart.result && j.chart.result[0];
+        if (x && (x.timestamp || []).length) { R = x; break; }
+      } catch {}
+    }
+    if (!R) return null;
     const ts = R.timestamp || [], Q = (R.indicators && R.indicators.quote && R.indicators.quote[0]) || {}, cl = Q.close || [], t = [], c = [], o = [], h = [], l = [], v = [];
     ts.forEach((x, k) => { if (cl[k] != null) { t.push(x * 1000); c.push(cl[k]); o.push(Q.open && Q.open[k] != null ? Q.open[k] : cl[k]); h.push(Q.high && Q.high[k] != null ? Q.high[k] : cl[k]); l.push(Q.low && Q.low[k] != null ? Q.low[k] : cl[k]); v.push((Q.volume && Q.volume[k]) || 0); } });
     const m = R.meta || {};
