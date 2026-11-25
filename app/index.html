@@ -188,7 +188,7 @@ const ACCTS=[['all','All Accounts'],['401k','401(k)'],['roth','Roth IRA'],['brok
 const ACK={'401k':'401(k)',roth:'Roth IRA',brok:'Brokerage',ira:'Traditional IRA',hsa:'HSA',other:'Other investment'};const ACL=()=>(S.acl||[]).map(a=>({id:String(a.id),name:esc(a.name)+(a.last4?' #x'+esc(a.last4):'')}));const acctName=k=>{const a=(S.acl||[]).find(x=>String(x.id)==String(k));return a?esc(a.name)+(a.last4?' #x'+esc(a.last4):''):(ACN[k]||'Unassigned')};
 const acctOf=x=>x.acct||'brok',acctNorm=v=>{const t=String(v||'').toLowerCase();return /401|403|retire/.test(t)?'401k':/roth|ira/.test(t)?'roth':'brok'},ACN=Object.fromEntries(ACCTS);
 const pxOf=x=>{const q=(S.quotes||{})[x.t];return q&&q.p>0?q.p:x.px},prevOf=x=>{const q=(S.quotes||{})[x.t];return q&&q.prev>0?q.prev:0};
-const dayOne=x=>{const p=prevOf(x),px=pxOf(x),t=today();if(!x.lots)return p?x.sh*(px-p):0;return x.lots.reduce((s,l)=>l.date==t&&l.cost?s+l.sh*(px-l.cost):p?s+l.sh*(px-p):s,0)};
+const dayOne=x=>{const p=prevOf(x),px=pxOf(x),q=(S.quotes||{})[x.t],t=q&&q.at>0?(d=>d<=today()?d:today())(dstr(new Date(q.at))):today();if(!x.lots)return p?x.sh*(px-p):0;return x.lots.reduce((s,l)=>l.date>=t&&l.cost?s+l.sh*(px-l.cost):p?s+l.sh*(px-p):s,0)};
 const dayChg=(L)=>(L||S.hold).reduce((s,x)=>s+dayOne(x),0);
 const portVal=L=>(L||S.hold).reduce((s,x)=>s+x.sh*pxOf(x),0),portCost=L=>(L||S.hold).reduce((s,x)=>s+x.sh*x.cost,0);
 function prs(r){const o={};S.sets.filter(x=>inR(x.date,r)).forEach(x=>{const e=x.w*(1+x.r/30),q=o[x.ex]||(o[x.ex]={e:0,d:'',b:''});if(e>q.e){q.e=e;q.b=x.w+' \u00d7 '+x.r}if(x.date>q.d)q.d=x.date});return o}
