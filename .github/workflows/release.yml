@@ -38,7 +38,7 @@ jobs:
           if (-not (Test-Path $exe)) { choco install nsis -y --no-progress }
           if (-not (Test-Path $exe)) {
             Write-Host 'choco failed, falling back to the NSIS zip'
-            Invoke-WebRequest -Uri 'https://downloads.sourceforge.net/project/nsis/NSIS%203/3.10/nsis-3.10.zip' -OutFile "$env:RUNNER_TEMP\nsis.zip" -MaximumRetryCount 5 -RetryIntervalSec 5
+            curl.exe -L --fail --retry 5 --retry-delay 5 -A 'curl/8.4' -o "$env:RUNNER_TEMP\nsis.zip" 'https://sourceforge.net/projects/nsis/files/NSIS%203/3.10/nsis-3.10.zip/download'
             Expand-Archive "$env:RUNNER_TEMP\nsis.zip" -DestinationPath 'C:\nsis-zip' -Force
             $exe = (Get-ChildItem 'C:\nsis-zip' -Recurse -Filter makensis.exe | Select-Object -First 1).FullName
           }
