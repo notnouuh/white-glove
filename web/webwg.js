@@ -44,6 +44,7 @@
       } catch (e) { return null; }
     },
     pxInfo: async sym => { if (!P) return null; try { const r = await fetch(P + '/info?s=' + encodeURIComponent(clean(sym))); return r.ok ? r.json() : null; } catch (e) { return null; } },
+    pxNews: async l => { if (!P) return []; try { const r = await fetch(P + '/news?s=' + encodeURIComponent((l || []).map(clean).join(','))); return r.ok ? r.json() : []; } catch (e) { return []; } },
     pxFund: async sym => { if (!P) return { holdings: [] }; try { const r = await fetch(P + '/fund?s=' + encodeURIComponent(clean(sym))); return r.ok ? r.json() : { holdings: [] }; } catch (e) { return { holdings: [] }; } }
   };
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(noop);

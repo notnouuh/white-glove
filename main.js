@@ -229,6 +229,23 @@ ipcMain.handle('px:info', async (_e, sym) => {
     return { cap: q.marketCap, open: q.regularMarketOpen, dh: q.regularMarketDayHigh, dl: q.regularMarketDayLow, vol: q.regularMarketVolume, exch: q.fullExchangeName, cur: q.currency, name: q.longName || q.shortName, hi52: q.fiftyTwoWeekHigh, lo52: q.fiftyTwoWeekLow, prev: q.regularMarketPreviousClose };
   } catch { return null; }
 });
+ipcMain.handle('px:news', async (_e, syms) => {
+  try {
+    const L = (Array.isArray(syms) ? syms : []).slice(0, 8).map(cleanSym).filter(Boolean), seen = new Map();
+    await Promise.all(L.map(async sym => {
+      for (const host of ['query1', 'query2']) {
+        try {
+          const r = await fetch('https://' + host + '.finance.yahoo.com/v1/finance/search?q=' + encodeURIComponent(sym) + '&quotesCount=0&newsCount=6', { headers: UA });
+          if (!r.ok) continue;
+          const j = await r.json();
+          (j.news || []).forEach(n => { const k = n.uuid || n.link; if (!k || !n.title || !n.link) return; const o = seen.get(k) || { title: n.title, link: n.link, pub: n.publisher, t: (n.providerPublishTime || 0) * 1000, syms: [] }; if (n.relatedTickers) n.relatedTickers.forEach(x => { if (!o.syms.includes(x) && o.syms.length < 4) o.syms.push(x); }); seen.set(k, o); });
+          return;
+        } catch {}
+      }
+    }));
+    return [...seen.values()].sort((a, b) => b.t - a.t).slice(0, 30);
+  } catch { return []; }
+});
 ipcMain.handle('px:fund', async (_e, sym) => {
   try {
     const a = await yAuth();
