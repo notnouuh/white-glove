@@ -26,6 +26,5 @@ contextBridge.exposeInMainWorld('wg', {
   pxChart: (s, r) => ipcRenderer.invoke('px:chart', s, r),
   pxInfo: s => ipcRenderer.invoke('px:info', s),
   pxFund: s => ipcRenderer.invoke('px:fund', s),
-  pxNews: l => ipcRenderer.invoke('px:news', l),
   ai: b => ipcRenderer.invoke('ai:send', b)
 });
