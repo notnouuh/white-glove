@@ -42,6 +42,13 @@ function create() {
   win.loadFile(path.join(__dirname, 'app', 'index.html'), process.env.WG_SHOT ? { query: { nosplash: '1' } } : undefined);
   win.webContents.setWindowOpenHandler(({ url }) => { if (/^https:/.test(url)) shell.openExternal(url); return { action: 'deny' }; });
   win.webContents.on('will-navigate', e => e.preventDefault());
+  // Clipboard / undo shortcuts, handled here so they work even with the menu bar hidden.
+  win.webContents.on('before-input-event', (e, i) => {
+    if (i.type !== 'keyDown' || !(i.control || i.meta) || i.alt) return;
+    const k = String(i.key).toLowerCase(), wc = win.webContents;
+    const m = { c: 'copy', x: 'cut', v: 'paste', a: 'selectAll', z: i.shift ? 'redo' : 'undo', y: 'redo' }[k];
+    if (m) { e.preventDefault(); wc[m](); }
+  });
   if (process.env.WG_SHOT) {
     win.webContents.on('did-finish-load', async () => {
       await new Promise(r => setTimeout(r, 800));
