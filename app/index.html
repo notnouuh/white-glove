@@ -153,7 +153,7 @@ function fixAccts(){const o=S.accts||[],am=o.find(x=>x.id=='amex'),c1=o.find(x=>
 const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}};
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const usd=n=>'\uE000'+(n<0?'$(':'$')+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:Number.isInteger(n)?0:2,maximumFractionDigits:2})+(n<0?')':'')+'\uE001';
-const uid=()=>Date.now()+Math.random(),num=v=>{const n=parseFloat(String(v).replace(/[$,]/g,''));return isNaN(n)?0:n};
+const dropEmptyAcct=id=>{if(!S.hold.some(x=>acctOf(x)==id))S.acl=(S.acl||[]).filter(x=>String(x.id)!=String(id))};const uid=()=>Date.now()+Math.random(),num=v=>{const n=parseFloat(String(v).replace(/[$,]/g,''));return isNaN(n)?0:n};
 const pad=n=>String(n).padStart(2,'0'),dstr=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()),today=()=>dstr(new Date()),parseD=s=>new Date(s+'T00:00');
 const age=d=>Math.round((parseD(today())-parseD(d))/864e5);
 const RD={today:1,week:7,month:30,year:365,all:1e9},RL={today:'Today',week:'Last 7 days',month:'Last 30 days',year:'Last 12 months',all:'All time'};
@@ -524,7 +524,7 @@ function render(){if(UIB){UIP=true;return}renderTB();renderSide();const m=$('#ma
 document.addEventListener('click',e=>{const cmt=e.target.closest('[data-chmt]');if(cmt){e.stopImmediatePropagation();S.chm=S.chm=='usd'?'pct':'usd';save();render();return}const acd=e.target.closest('[data-acd]');if(acd){const id=acd.dataset.acd,hs=S.hold.filter(x=>acctOf(x)==id),ac_=(S.acl||[]).find(x=>String(x.id)==id);if(hs.length&&!confirm('Remove '+(ac_?ac_.name:'this account')+' and its '+hs.length+' holding'+(hs.length==1?'':'s')+'?'))return;S.hold=S.hold.filter(x=>acctOf(x)!=id);S.acl=(S.acl||[]).filter(x=>String(x.id)!=id);save();render();return}const ge=e.target.closest&&e.target.closest('[data-geye]');if(ge){{const g=ge.dataset.geye;REVG[g]=!rvG(g)}armHide();render();return}
 const ao=e.target.closest&&e.target.closest('[data-aopen]');if(ao){HLA=HLA==ao.dataset.aopen?null:ao.dataset.aopen;render();const hh=document.getElementById('hold-h');if(hh&&HLA)hh.scrollIntoView({behavior:'smooth',block:'start'});return}
 const ho=e.target.closest&&e.target.closest('[data-hopen]');if(ho){OPENH[ho.dataset.hopen]=!OPENH[ho.dataset.hopen];render();return}
-const lx=e.target.closest&&e.target.closest('[data-lotx]');if(lx){const[hid,lid]=lx.dataset.lotx.split(':'),h=S.hold.find(x=>String(x.id)==hid);if(h&&h.lots){h.lots=h.lots.filter(l=>String(l.id)!=lid);if(h.lots.length)lotSum(h);else S.hold=S.hold.filter(x=>x!==h);save();render();toast('Buy removed')}return}
+const lx=e.target.closest&&e.target.closest('[data-lotx]');if(lx){const[hid,lid]=lx.dataset.lotx.split(':'),h=S.hold.find(x=>String(x.id)==hid);if(h&&h.lots){h.lots=h.lots.filter(l=>String(l.id)!=lid);if(h.lots.length)lotSum(h);else{const ha=acctOf(h);S.hold=S.hold.filter(x=>x!==h);dropEmptyAcct(ha)}save();render();toast('Buy removed')}return}
 const cx=e.target.closest&&e.target.closest('[data-calx]');if(cx){const k=cx.dataset.calx;if(S.cal)delete S.cal[k];if(S.locks)delete S.locks[k];if(S.hitsM)delete S.hitsM[k];save();render();toast("Log deleted");return}
 
  const ey=e.target.closest('.eye');if(ey){e.preventDefault();e.stopPropagation();const sp=ey.closest('.amt'),sh=!sp.dataset.s;setAmt(sp,sh);clearTimeout(sp._t);if(sh)sp._t=setTimeout(()=>{if(sp.isConnected)setAmt(sp,false)},60000);return}
@@ -552,7 +552,7 @@ if(e.target.closest&&e.target.closest('[data-cext]')){CH.ext=CH.ext!==true;rende
  if(e.target.closest('[data-hpe]')){HEDP=!HEDP;render();return}
  const ps=e.target.closest('[data-pside]');if(ps){const m=(S.meds||[]).find(x=>x.id==ps.dataset.pside);if(m){const cur=medSite(m),o=/Left/.test(cur)?cur.replace('Left','Right'):cur.replace('Right','Left');m.sov=o;save();render()}return}
  const pe=e.target.closest('[data-pedit]');if(pe){PEDIT=PEDIT==pe.dataset.pedit?null:pe.dataset.pedit;render();return}
- const dl=e.target.closest('[data-del]');if(dl){S[dl.dataset.del]=S[dl.dataset.del].filter(x=>x.id!=dl.dataset.id);save();render();return}
+ const dl=e.target.closest('[data-del]');if(dl){const hh=dl.dataset.del=='hold'?S.hold.find(x=>x.id==dl.dataset.id):null,ha=hh?acctOf(hh):null;S[dl.dataset.del]=S[dl.dataset.del].filter(x=>x.id!=dl.dataset.id);if(ha!=null)dropEmptyAcct(ha);save();render();return}
  const ch=e.target.closest('[data-chip]');if(ch){$('#cf input').value=ch.textContent;$('#cf').requestSubmit();return}
  const b=e.target.closest('[data-act]');if(!b)return;act(b.dataset.act)});
 function act(a){switch(a){
