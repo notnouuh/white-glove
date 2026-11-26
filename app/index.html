@@ -491,6 +491,9 @@ function npToggle(){const o=$('#np');if(o){o.remove();return}const el=document.c
 function chime(){try{const C=window.AudioContext||window.webkitAudioContext,x=new C();x.resume&&x.resume();[0,.7,1.4].forEach(t0=>[880,1175].forEach((f,k)=>{const o=x.createOscillator(),g=x.createGain();o.type='sine';o.frequency.value=f;const t=x.currentTime+t0+k*.18;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.35,t+.02);g.gain.exponentialRampToValueAtTime(.001,t+.5);o.connect(g);g.connect(x.destination);o.start(t);o.stop(t+.55)}));setTimeout(()=>{try{x.close()}catch(e){}},3000)}catch(e){}}
 function remCheck(){const r=S.rem;if(r&&!r.fired&&Date.now()>=r.at){r.fired=true;save();notify('Reminder',r.m||'Time’s up');chime();if(tab=='overview'&&!(document.activeElement&&/INPUT|TEXTAREA/.test(document.activeElement.tagName)))render()}}
 setInterval(remCheck,5000);setTimeout(remCheck,3000);
+function lastSun(){const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-d.getDay());return d.getTime()}
+let ABUSY=0;async function autoBackup(){if(!wg.autoExport||ABUSY||(S.autoAt||0)>=lastSun())return;ABUSY=1;const was=S.autoAt;S.autoAt=Date.now();let p=null;try{const o=Object.assign({},S);p=await wg.autoExport('white-glove-backup-'+new Date().toLocaleDateString('en-CA')+'.json',JSON.stringify(o,null,2))}catch(e){}ABUSY=0;if(p){save();toast('Weekly backup saved to Desktop\\White Glove')}else{S.autoAt=was;toast('Weekly backup failed')}}
+setInterval(autoBackup,60000);setTimeout(autoBackup,8000);
 function notifCheck(){const n=NC(),c=n.cfg,now=new Date(),d=today();
  if(c.nutOn){const[h,m]=String(c.nutTime).split(':').map(Number);if(now.getHours()*60+now.getMinutes()>=h*60+m&&n.last.nut!==d){n.last.nut=d;if(!Object.keys(dayHit(d)).length)notify('Log your nutrition','Don\u2019t forget to log today\u2019s macros.')}}
  if(c.swingOn&&S.hold.length&&S.quotes){const th=+c.swing||3,pv=portVal(),dc=dayChg(),base=pv-dc,pp=base>0?dc/base*100:0,pk='p:'+d+(pp>0?'u':'d');

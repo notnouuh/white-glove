@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('wg', {
   writeFile: (p, b, m, f) => ipcRenderer.invoke('file:write', p, b, m, f),
   newFile: (n, b) => ipcRenderer.invoke('file:newFile', n, b),
   saveFile: (n, d) => ipcRenderer.invoke('file:save', n, d),
+  autoExport: (n, d) => ipcRenderer.invoke('file:auto', n, d),
   watch: p => ipcRenderer.invoke('file:watch', p),
   onFileChanged: f => { cb = f; },
   hasKey: () => ipcRenderer.invoke('key:has'),

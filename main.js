@@ -85,6 +85,13 @@ ipcMain.handle('file:newFile', async (_e, name, b64) => {
   fs.writeFileSync(r.filePath, Buffer.from(b64, 'base64'));
   return { path: r.filePath, name: path.basename(r.filePath) };
 });
+ipcMain.handle('file:auto', async (_e, name, data) => {
+  const dirs = [...(process.platform === 'win32' ? [path.join('C:\\Users\\noaha\\Desktop', 'White Glove')] : []), path.join(app.getPath('desktop'), 'White Glove')];
+  for (const d of dirs) {
+    try { fs.mkdirSync(d, { recursive: true }); const f = path.join(d, String(name).replace(/[\\/:*?"<>|]/g, '_')); fs.writeFileSync(f, data); return f; } catch {}
+  }
+  return null;
+});
 ipcMain.handle('file:save', async (_e, name, data) => {
   const r = await dialog.showSaveDialog(win, { defaultPath: name });
   if (r.canceled || !r.filePath) return false;
